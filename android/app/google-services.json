@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "1071143691513",
+    "firebase_url": "https://usulicius-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "usulicius",
     "storage_bucket": "usulicius.firebasestorage.app"
   },
