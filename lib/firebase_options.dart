@@ -46,6 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1071143691513',
     projectId: 'usulicius',
     authDomain: 'usulicius.firebaseapp.com',
+    databaseURL: 'https://usulicius-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'usulicius.firebasestorage.app',
   );
 
@@ -54,6 +55,7 @@ class DefaultFirebaseOptions {
     appId: '1:1071143691513:android:ce5ce696d88cba87802e28',
     messagingSenderId: '1071143691513',
     projectId: 'usulicius',
+    databaseURL: 'https://usulicius-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'usulicius.firebasestorage.app',
   );
 
@@ -62,6 +64,7 @@ class DefaultFirebaseOptions {
     appId: '1:1071143691513:ios:bfac55144007d162802e28',
     messagingSenderId: '1071143691513',
     projectId: 'usulicius',
+    databaseURL: 'https://usulicius-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'usulicius.firebasestorage.app',
     iosBundleId: 'com.example.usuliciusKelompokLucky',
   );
@@ -71,6 +74,7 @@ class DefaultFirebaseOptions {
     appId: '1:1071143691513:ios:bfac55144007d162802e28',
     messagingSenderId: '1071143691513',
     projectId: 'usulicius',
+    databaseURL: 'https://usulicius-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'usulicius.firebasestorage.app',
     iosBundleId: 'com.example.usuliciusKelompokLucky',
   );
@@ -81,6 +85,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1071143691513',
     projectId: 'usulicius',
     authDomain: 'usulicius.firebaseapp.com',
+    databaseURL: 'https://usulicius-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'usulicius.firebasestorage.app',
   );
+
 }
