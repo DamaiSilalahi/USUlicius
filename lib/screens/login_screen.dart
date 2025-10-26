@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-// Ganti 'projek' dengan nama proyek Anda jika berbeda
 import 'package:usulicius_kelompok_lucky/screens/register_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/auth_toggle.dart';
-import 'package:usulicius_kelompok_lucky/screens/forgot_password_screen.dart'; // Import ForgotPasswordScreen
+import 'package:usulicius_kelompok_lucky/screens/forgot_password_screen.dart'; 
 
-// Definisikan warna yang dibutuhkan file ini
 const Color kPrimaryMaroon = Color(0xFF800020);
 
 class LoginScreen extends StatefulWidget {
@@ -28,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() {
-    // TODO: Tambahkan logika login sesungguhnya
     print('Login Berhasil! (Username: ${_usernameController.text}, Password: ${_passwordController.text})');
     print('Remember Me: $_rememberMe');
   }
@@ -39,19 +36,18 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: kPrimaryMaroon,
       body: Stack(
         children: [
-          // Bagian atas Maroon dengan Logo dan Judul
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.40, // Tinggi area logo
+            height: MediaQuery.of(context).size.height * 0.40, 
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/images/logo.gif', // Pastikan path benar
+                    'assets/images/logo.gif',
                     width: 60,
                     height: 60,
                   ),
@@ -70,16 +66,14 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // Container Putih (dan "Bayangan" lapisannya) untuk Form Login
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.38, // Posisi dari atas
+            top: MediaQuery.of(context).size.height * 0.38,
             left: 0,
             right: 0,
-            bottom: 0.0, // Membentang ke bawah
+            bottom: 0.0,
             child: Stack(
               alignment: Alignment.topCenter,
               children: [
-                // Layer 1: "Bayangan"
                 Padding(
                   padding: const EdgeInsets.only(
                     top: 0,
@@ -88,13 +82,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFBC8F9B).withOpacity(0.5), // Warna bayangan
+                      color: const Color(0xFFBC8F9B).withOpacity(0.5),
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                     ),
                   ),
                 ),
 
-                // Layer 2: Kotak Form Putih Utama
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   decoration: const BoxDecoration(
@@ -104,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min, // Tinggi pas konten
+                      mainAxisSize: MainAxisSize.min, 
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         AuthToggle(
@@ -128,7 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: const Text('Login'),
                           ),
                         ),
-                        const SizedBox(height: 20), // Padding bawah
                       ],
                     ),
                   ),
@@ -219,7 +211,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         TextButton(
           onPressed: () {
-            // Navigasi ke Forgot Password Screen
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
             );
