@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/screens/register_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/auth_toggle.dart';
-import 'package:usulicius_kelompok_lucky/screens/forgot_password_screen.dart'; 
+import 'package:usulicius_kelompok_lucky/screens/forgot_password_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 
@@ -17,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -25,9 +27,40 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+
+  // void _handleLogin() {
+  //
+  //   print('Login Berhasil! (Username: ${_usernameController.text}, Password: ${_passwordController.text})');
+  //
+  //   print('Remember Me: $_rememberMe');
+  //
+  // }
   void _handleLogin() {
-    print('Login Berhasil! (Username: ${_usernameController.text}, Password: ${_passwordController.text})');
-    print('Remember Me: $_rememberMe');
+    final username = _usernameController.text;
+    final password = _passwordController.text;
+
+    setState(() {
+      _errorMessage = null;
+    });
+
+    if (username.isNotEmpty && password.isNotEmpty) {
+      if (username == "admin" && password == "admin123") {
+        print('Login Berhasil! (Username: $username)');
+        print('Remember Me: $_rememberMe');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false, // Menghapus semua rute sebelumnya
+        );
+      } else {
+        setState(() {
+          _errorMessage = "Username atau Password salah!";
+        });
+      }
+    } else {
+      setState(() {
+        _errorMessage = "Username dan Password tidak boleh kosong!";
+      });
+    }
   }
 
   @override
@@ -40,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
             top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.40, 
+            height: MediaQuery.of(context).size.height * 0.40,
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -97,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min, 
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         AuthToggle(
@@ -113,6 +146,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         _buildFormFields(),
                         const SizedBox(height: 16),
                         _buildLoginExtras(),
+
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 20.0),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 15),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 13,
+                                  fontFamily: 'Roboto Flex',
+                                ),
+                              ),
+                            ),
+                          ),
+
                         const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,

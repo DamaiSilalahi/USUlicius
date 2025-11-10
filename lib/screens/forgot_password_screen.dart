@@ -82,7 +82,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'asset/logo.gif',
+                    'assets/images/logo.gif',
                     width: 60,
                     height: 60,
                   ),

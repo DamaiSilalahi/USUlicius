@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart'; 
+import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 
@@ -22,8 +22,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'USULicius',
       theme: ThemeData(
+        primarySwatch: Colors.red,
         primaryColor: kPrimaryMaroon,
-        scaffoldBackgroundColor: kPrimaryMaroon,
+        scaffoldBackgroundColor: Colors.grey[50],
         fontFamily: 'Roboto Flex',
         appBarTheme: const AppBarTheme(
           backgroundColor: kPrimaryMaroon,
@@ -100,7 +101,13 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(3),
           ),
           side: const BorderSide(color: kPrimaryMaroon, width: 1),
-        )
+        ),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
       ),
       home: const SplashScreen(),
     );
