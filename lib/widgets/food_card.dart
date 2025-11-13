@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
-class FoodCard extends StatefulWidget {
+class FoodCard extends StatelessWidget {
   final String imageUrl;
   final String title;
   final String location;
   final String rating;
   final VoidCallback? onTap;
+  final bool isFavorite;
+  final VoidCallback onFavoritePressed;
 
   const FoodCard({
     Key? key,
@@ -14,19 +16,14 @@ class FoodCard extends StatefulWidget {
     required this.location,
     required this.rating,
     this.onTap,
+    required this.isFavorite,
+    required this.onFavoritePressed,
   }) : super(key: key);
-
-  @override
-  State<FoodCard> createState() => _FoodCardState();
-}
-
-class _FoodCardState extends State<FoodCard> {
-  bool _isFavorited = false;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: widget.onTap,
+      onTap: onTap,
       splashColor: Colors.red[100],
       borderRadius: BorderRadius.circular(15.0),
       child: Padding(
@@ -53,7 +50,7 @@ class _FoodCardState extends State<FoodCard> {
             children: [
               CircleAvatar(
                 radius: 35,
-                backgroundImage: NetworkImage(widget.imageUrl),
+                backgroundImage: NetworkImage(imageUrl),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -61,20 +58,26 @@ class _FoodCardState extends State<FoodCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.title,
+                      title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
                         const SizedBox(width: 4),
-                        Text(
-                          widget.location,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        Expanded(
+                          child: Text(
+                            location,
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -84,7 +87,7 @@ class _FoodCardState extends State<FoodCard> {
                         const Icon(Icons.star, size: 14, color: Colors.orange),
                         const SizedBox(width: 4),
                         Text(
-                          widget.rating,
+                          rating,
                           style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         ),
                       ],
@@ -94,15 +97,11 @@ class _FoodCardState extends State<FoodCard> {
               ),
               IconButton(
                 icon: Icon(
-                  _isFavorited ? Icons.favorite : Icons.favorite_border,
-                  color: _isFavorited ? Colors.red : Colors.red[300],
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? Colors.red : Colors.red[300],
                   size: 28,
                 ),
-                onPressed: () {
-                  setState(() {
-                    _isFavorited = !_isFavorited;
-                  });
-                },
+                onPressed: onFavoritePressed,
               ),
             ],
           ),
