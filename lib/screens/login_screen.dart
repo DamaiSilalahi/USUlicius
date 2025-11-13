@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:usulicius_kelompok_lucky/screens/register_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/auth_toggle.dart';
 import 'package:usulicius_kelompok_lucky/screens/forgot_password_screen.dart';
-import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
-
+import 'package:usulicius_kelompok_lucky/widgets/register_form.dart';
 const Color kPrimaryMaroon = Color(0xFF800020);
 
 class LoginScreen extends StatefulWidget {
@@ -14,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  bool _isLogin = true;
   bool _obscurePassword = true;
   bool _rememberMe = false;
   final _usernameController = TextEditingController();
@@ -28,13 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
 
-  // void _handleLogin() {
-  //
-  //   print('Login Berhasil! (Username: ${_usernameController.text}, Password: ${_passwordController.text})');
-  //
-  //   print('Remember Me: $_rememberMe');
-  //
-  // }
   void _handleLogin() {
     final username = _usernameController.text;
     final password = _passwordController.text;
@@ -48,8 +41,8 @@ class _LoginScreenState extends State<LoginScreen> {
         print('Login Berhasil! (Username: $username)');
         print('Remember Me: $_rememberMe');
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false, // Menghapus semua rute sebelumnya
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+              (route) => false,
         );
       } else {
         setState(() {
@@ -66,9 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false, // <-- INI PERBAIKANNYA
       backgroundColor: kPrimaryMaroon,
       body: Stack(
         children: [
+          // Header Logo (Tidak berubah)
           Positioned(
             top: 0,
             left: 0,
@@ -99,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
+          // Container Putih
           Positioned(
             top: MediaQuery.of(context).size.height * 0.38,
             left: 0,
@@ -107,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Stack(
               alignment: Alignment.topCenter,
               children: [
+                // Background shadow (Tidak berubah)
                 Padding(
                   padding: const EdgeInsets.only(
                     top: 0,
@@ -121,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
+                // Konten Putih
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   decoration: const BoxDecoration(
@@ -133,50 +131,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        // AuthToggle sekarang mengontrol state _isLogin
                         AuthToggle(
-                          isLogin: true,
-                          onLoginTap: () {},
+                          isLogin: _isLogin,
+                          onLoginTap: () {
+                            setState(() {
+                              _isLogin = true;
+                              _errorMessage = null; // Hapus error saat ganti form
+                            });
+                          },
                           onRegisterTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                            );
+                            setState(() {
+                              _isLogin = false;
+                              _errorMessage = null; // Hapus error saat ganti form
+                            });
                           },
                         ),
                         const SizedBox(height: 30),
-                        _buildFormFields(),
-                        const SizedBox(height: 16),
-                        _buildLoginExtras(),
 
-                        if (_errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 20.0),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 13,
-                                  fontFamily: 'Roboto Flex',
-                                ),
-                              ),
-                            ),
-                          ),
-
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _handleLogin,
-                            child: const Text('Login'),
-                          ),
+                        // AnimatedSwitcher untuk ganti form
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                          child: _isLogin
+                              ? _buildLoginForm(key: const ValueKey('login'))
+                              : const RegisterForm(key: ValueKey('register')),
                         ),
                       ],
                     ),
@@ -187,6 +171,50 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Form Login dipisah ke method sendiri
+  Widget _buildLoginForm({Key? key}) {
+    return Column(
+      key: key,
+      children: [
+        _buildFormFields(),
+        const SizedBox(height: 16),
+        _buildLoginExtras(),
+
+        if (_errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 20.0),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                  vertical: 10, horizontal: 15),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 13,
+                  fontFamily: 'Roboto Flex',
+                ),
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 30),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _handleLogin,
+            child: const Text('Login'),
+          ),
+        ),
+      ],
     );
   }
 

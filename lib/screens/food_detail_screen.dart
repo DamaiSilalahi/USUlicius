@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
+import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 
 class FoodDetailScreen extends StatefulWidget {
+  final String foodId;
+  final int originIndex;
   final String imageUrl;
   final String title;
   final String price;
@@ -10,6 +15,8 @@ class FoodDetailScreen extends StatefulWidget {
 
   const FoodDetailScreen({
     super.key,
+    required this.foodId,
+    required this.originIndex,
     required this.imageUrl,
     required this.title,
     required this.price,
@@ -23,36 +30,40 @@ class FoodDetailScreen extends StatefulWidget {
 }
 
 class _FoodDetailScreenState extends State<FoodDetailScreen> {
-  bool _isFavorited = false;
-  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
+
+    final foodProvider = Provider.of<FoodProvider>(context);
+    final food = foodProvider.findById(widget.foodId);
+    final bool isFavorite = food.isFavorite;
 
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildImageHeader(),
+            _buildImageHeader(isFavorite, foodProvider),
             _buildContent(),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        currentIndex: widget.originIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          if (index == 0) {
+          if (index == widget.originIndex) {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
+          } else {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+            Future.delayed(const Duration(milliseconds: 50), () {
+              homeScreenKey.currentState?.navigateToPage(index);
+            });
           }
-          // else if (index == 1) { ... ke favorite }
-          // else if (index == 2) { ... ke settings }
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
@@ -74,7 +85,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  Widget _buildImageHeader() {
+  Widget _buildImageHeader(bool isFavorite, FoodProvider foodProvider) {
     return Stack(
       children: [
         Container(
@@ -105,7 +116,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
         ),
-
         Positioned(
           top: 40,
           left: 10,
@@ -117,7 +127,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
         ),
-
         Positioned(
           bottom: 20,
           right: 20,
@@ -129,14 +138,12 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             child: IconButton(
               icon: Icon(
-                _isFavorited ? Icons.favorite : Icons.favorite_border,
+                isFavorite ? Icons.favorite : Icons.favorite_border,
                 color: Colors.red,
                 size: 28,
               ),
               onPressed: () {
-                setState(() {
-                  _isFavorited = !_isFavorited;
-                });
+                foodProvider.toggleFavoriteStatus(widget.foodId);
               },
             ),
           ),
@@ -151,7 +158,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Judul
           Text(
             widget.title,
             style: const TextStyle(
@@ -160,8 +166,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Harga
           Text(
             widget.price,
             style: TextStyle(
@@ -172,7 +176,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Rating
           Row(
             children: [
               ...List.generate(
@@ -203,7 +206,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Lokasi
           Row(
             children: [
               Icon(Icons.location_on, color: Colors.grey[600], size: 18),
@@ -212,13 +214,13 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 child: Text(
                   widget.location,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // Deskripsi
           const Text(
             'Deskripsi :',
             style: TextStyle(
@@ -252,8 +254,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       ),
     );
   }
-
-  // === FUNGSI BOTTOM SHEET (Lihat Review) ===
 
   void _showReviewSheet(BuildContext context) {
     showModalBottomSheet(
@@ -322,9 +322,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         const Spacer(),
         TextButton(
           onPressed: () {
-            // 1. Tutup bottom sheet
             Navigator.pop(sheetContext);
-            // 2. Buka dialog baru
             _showAddReviewDialog(context);
           },
           child: Text(
@@ -389,12 +387,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  // === INI FUNGSI DIALOG DENGAN JUDUL MAROON ===
   void _showAddReviewDialog(BuildContext context) {
     final TextEditingController _reviewController = TextEditingController();
     int _rating = 0;
-
-    // State error
     String _reviewHintText = 'Review';
     bool _hasReviewError = false;
     String? _ratingErrorText;
@@ -408,149 +403,151 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             final Color errorColor = Theme.of(context).colorScheme.error;
             final Color primaryColor = Theme.of(context).primaryColor;
             final Color greyColor = Colors.grey[600]!;
-
-            // Definisikan padding yang sama untuk kedua tombol
-            const EdgeInsets buttonPadding = EdgeInsets.symmetric(vertical: 16, horizontal: 24);
+            const EdgeInsets buttonPadding = EdgeInsets.symmetric(vertical: 12, horizontal: 16);
 
             return Dialog(
               insetPadding: const EdgeInsets.symmetric(horizontal: 20.0),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20.0),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 1. Judul
-                    Text( // <-- 'const' DIHAPUS
-                      'Tambah Review',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor, // <-- WARNA MAROON
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 2. Konten (Text Field & Rating)
-                    TextField(
-                      controller: _reviewController,
-                      decoration: InputDecoration(
-                        hintText: _reviewHintText,
-                        hintStyle: TextStyle(
-                          color: _hasReviewError ? errorColor : greyColor,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: BorderSide(
-                            color: _hasReviewError ? errorColor : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ?? Colors.grey),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: BorderSide(
-                            color: _hasReviewError ? errorColor : primaryColor,
-                            width: 2,
-                          ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Tambah Review',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    Text(
-                      _ratingErrorText ?? 'Rate this food',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: _ratingErrorText != null
-                            ? errorColor
-                            : Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                    ),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        return IconButton(
-                          icon: Icon(
-                            index < _rating ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
+                      TextField(
+                        controller: _reviewController,
+                        decoration: InputDecoration(
+                          hintText: _reviewHintText,
+                          hintStyle: TextStyle(
+                            color: _hasReviewError ? errorColor : greyColor,
                           ),
-                          onPressed: () {
-                            stateSetter(() {
-                              _rating = index + 1;
-                              _ratingErrorText = null;
-                            });
-                          },
-                        );
-                      }),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // 3. Tombol (Actions)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Theme.of(context).primaryColor,
-                            side: BorderSide(color: Theme.of(context).primaryColor),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                              color: _hasReviewError ? errorColor : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ?? Colors.grey),
                             ),
-                            padding: buttonPadding, // <-- Padding sama
                           ),
-                          child: const Text('Batal'),
-                          onPressed: () {
-                            Navigator.pop(dialogContext);
-                          },
-                        ),
-
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide(
+                              color: _hasReviewError ? errorColor : primaryColor,
+                              width: 2,
                             ),
-                            padding: buttonPadding, // <-- Padding sama
                           ),
-                          child: const Text('Kirim'),
-                          onPressed: () {
-                            bool isValid = true;
-                            final String reviewText = _reviewController.text;
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 16),
 
-                            stateSetter(() {
-                              if (reviewText.isEmpty) {
-                                _reviewHintText = 'Review cannot be empty';
-                                _hasReviewError = true;
-                                isValid = false;
-                              } else {
-                                _reviewHintText = 'Review';
-                                _hasReviewError = false;
-                              }
+                      Text(
+                        _ratingErrorText ?? 'Rate this food',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _ratingErrorText != null
+                              ? errorColor
+                              : Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
 
-                              if (_rating == 0) {
-                                _ratingErrorText = 'Rating cannot be empty';
-                                isValid = false;
-                              } else {
-                                _ratingErrorText = null;
-                              }
-                            });
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (int i = 0; i < 5; i++)
+                            GestureDetector(
+                              onTap: () {
+                                stateSetter(() {
+                                  _rating = i + 1;
+                                  _ratingErrorText = null;
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                child: Icon(
+                                  i < _rating ? Icons.star : Icons.star_border,
+                                  color: Colors.amber,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
 
-                            if (isValid) {
-                              // TODO: Logika simpan
+                      const SizedBox(height: 16),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Theme.of(context).primaryColor,
+                              side: BorderSide(color: Theme.of(context).primaryColor),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: buttonPadding,
+                            ),
+                            child: const Text('Batal'),
+                            onPressed: () {
                               Navigator.pop(dialogContext);
-                            }
-                          },
-                        ),
-                      ],
-                    )
-                  ],
+                            },
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: buttonPadding,
+                            ),
+                            child: const Text('Kirim'),
+                            onPressed: () {
+                              bool isValid = true;
+                              final String reviewText = _reviewController.text;
+
+                              stateSetter(() {
+                                if (reviewText.isEmpty) {
+                                  _reviewHintText = 'Review cannot be empty';
+                                  _hasReviewError = true;
+                                  isValid = false;
+                                } else {
+                                  _reviewHintText = 'Review';
+                                  _hasReviewError = false;
+                                }
+
+                                if (_rating == 0) {
+                                  _ratingErrorText = 'Rating cannot be empty';
+                                  isValid = false;
+                                } else {
+                                  _ratingErrorText = null;
+                                }
+                              });
+
+                              if (isValid) {
+                                Navigator.pop(dialogContext);
+                              }
+                            },
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ),
             );
