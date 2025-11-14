@@ -11,22 +11,22 @@ class TestReview extends StatefulWidget {
 class _TestReviewState extends State<TestReview> {
   final TextEditingController _commentController = TextEditingController();
   double _rating = 0;
-  final String _foodID = 'ayam_geprek_mahasiswa'; // contoh, nanti bisa dinamis
-  final String _userID = 'dummy_user_001';
-  final String _userName = 'Damai';
 
-  // 🔹 Tambah Review
+  final String _foodID = 'ayam_geprek_mahasiswa';
+  final String _userID = 'dummy_user_001';
+
   Future<void> tambahReview() async {
     if (_commentController.text.trim().isEmpty) return;
 
     try {
-      await FirebaseFirestore.instance.collection('review').add({
+      await FirebaseFirestore.instance.collection('reviews').add({
         'comment': _commentController.text.trim(),
         'rating': _rating,
         'foodID': _foodID,
         'userID': _userID,
-        'userName': _userName,
+        'date': Timestamp.now(),
       });
+
       _commentController.clear();
       setState(() => _rating = 0);
       print('✅ Review berhasil ditambahkan!');
@@ -35,11 +35,11 @@ class _TestReviewState extends State<TestReview> {
     }
   }
 
-  // 🔄 Ambil semua review berdasarkan foodID
   Stream<QuerySnapshot> getReviews() {
     return FirebaseFirestore.instance
-        .collection('review')
+        .collection('reviews')
         .where('foodID', isEqualTo: _foodID)
+        .orderBy('date', descending: true)
         .snapshots();
   }
 
@@ -50,8 +50,6 @@ class _TestReviewState extends State<TestReview> {
       body: Column(
         children: [
           const SizedBox(height: 16),
-
-          // ⭐ Rating Input
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (index) {
@@ -66,8 +64,6 @@ class _TestReviewState extends State<TestReview> {
               );
             }),
           ),
-
-          // 💬 Textfield untuk komentar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -79,15 +75,11 @@ class _TestReviewState extends State<TestReview> {
             ),
           ),
           const SizedBox(height: 10),
-
-          // 🔘 Tombol kirim
           ElevatedButton(
             onPressed: tambahReview,
             child: const Text('Kirim Review'),
           ),
           const Divider(),
-
-          // 📋 Daftar review dari Firestore
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: getReviews(),
@@ -95,32 +87,71 @@ class _TestReviewState extends State<TestReview> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('Belum ada review.'));
                 }
 
                 final data = snapshot.data!.docs;
+
                 return ListView.builder(
                   itemCount: data.length,
                   itemBuilder: (context, index) {
                     final doc = data[index];
-                    return ListTile(
-                      title: Text(doc.data().toString().contains('userName')
-    ? doc['userName']
-    : 'Anonim'),
-subtitle: Text(doc.data().toString().contains('comment')
-    ? doc['comment']
-    : '-'),
-trailing: Row(
-  mainAxisSize: MainAxisSize.min,
-  children: List.generate(
-    (doc.data().toString().contains('rating')
-        ? doc['rating'].toInt()
-        : 0),
-    (i) => const Icon(Icons.star, color: Colors.amber, size: 18),
-  ),
-),
+                    final d = doc.data() as Map<String, dynamic>;
 
+                    String tanggal = "";
+                    if (d['date'] != null) {
+                      final Timestamp t = d['date'];
+                      final DateTime dt = t.toDate();
+
+                      final bulan = [
+                        "Januari",
+                        "Februari",
+                        "Maret",
+                        "April",
+                        "Mei",
+                        "Juni",
+                        "Juli",
+                        "Agustus",
+                        "September",
+                        "Oktober",
+                        "November",
+                        "Desember"
+                      ];
+
+                      tanggal =
+                          "${dt.day} ${bulan[dt.month - 1]} ${dt.year} – "
+                          "${dt.hour.toString().padLeft(2, '0')}:"
+                          "${dt.minute.toString().padLeft(2, '0')}";
+                    }
+
+                    return ListTile(
+                      leading: const Icon(Icons.person),
+                      title: Text("User: ${d['userID']}"),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(d['comment'] ?? '-'),
+                          const SizedBox(height: 4),
+                          Text(
+                            tanggal,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(
+                          d['rating'] != null ? d['rating'].toInt() : 0,
+                          (i) => const Icon(
+                            Icons.star,
+                            color: Colors.amber,
+                            size: 18,
+                          ),
+                        ),
+                      ),
                     );
                   },
                 );
