@@ -118,7 +118,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const TestReview(),
+      home: const SplashScreen(),
     );
   }
 }
