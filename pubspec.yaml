@@ -8,6 +8,7 @@ environment:
   sdk: ^3.9.0
 
 dependencies:
+  provider: ^6.1.2
   flutter:
     sdk: flutter
 

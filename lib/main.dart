@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'firebase_options.dart';
 import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
+import 'package:usulicius_kelompok_lucky/test/test_makanan_page.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 
@@ -10,7 +13,13 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (ctx) => FoodProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -109,7 +118,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const SplashScreen(),
+      home: const TestMakananPage(),
     );
   }
 }
