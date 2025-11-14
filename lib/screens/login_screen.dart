@@ -17,7 +17,6 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool _isLogin = true;
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
@@ -91,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
           print('Login Berhasil! Username: $username, Email: $userEmail');
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(builder: (_) => HomeScreen()),
                   (route) => false,
             );
           }
@@ -119,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       print(e.toString());
     } finally {
-      if (context.mounted) {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -130,11 +129,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // <-- INI PERBAIKANNYA
+      resizeToAvoidBottomInset: false,
       backgroundColor: kPrimaryMaroon,
       body: Stack(
         children: [
-          // Header Logo (Tidak berubah)
           Positioned(
             top: 0,
             left: 0,
@@ -165,7 +163,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // Container Putih
           Positioned(
             top: MediaQuery.of(context).size.height * 0.38,
             left: 0,
@@ -174,7 +171,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Stack(
               alignment: Alignment.topCenter,
               children: [
-                // Background shadow (Tidak berubah)
                 Padding(
                   padding: const EdgeInsets.only(
                     top: 0,
@@ -189,7 +185,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // Konten Putih
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   decoration: const BoxDecoration(
@@ -202,34 +197,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // AuthToggle sekarang mengontrol state _isLogin
                         AuthToggle(
-                          isLogin: _isLogin,
+                          isLogin: true,
                           onLoginTap: () {
-                            setState(() {
-                              _isLogin = true;
-                              _errorMessage = null; // Hapus error saat ganti form
-                            });
                           },
                           onRegisterTap: () {
-                            setState(() {
-                              _isLogin = false;
-                              _errorMessage = null; // Hapus error saat ganti form
-                            });
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            );
                           },
                         ),
                         const SizedBox(height: 30),
 
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
-                            child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
-                                : const Text('Login'),
-                          ),
-                        ),
+                        _buildLoginForm(),
+
                       ],
                     ),
                   ),
@@ -242,7 +223,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Form Login dipisah ke method sendiri
   Widget _buildLoginForm({Key? key}) {
     return Column(
       key: key,
@@ -278,8 +258,10 @@ class _LoginScreenState extends State<LoginScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _handleLogin,
-            child: const Text('Login'),
+            onPressed: _isLoading ? null : _handleLogin,
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                : const Text('Login'),
           ),
         ),
       ],
