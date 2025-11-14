@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/register_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/verification_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/auth_toggle.dart';
 import 'package:usulicius_kelompok_lucky/screens/forgot_password_screen.dart';
-import 'package:usulicius_kelompok_lucky/widgets/register_form.dart';
+import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 const Color kPrimaryMaroon = Color(0xFF800020);
 
 class LoginScreen extends StatefulWidget {
@@ -16,9 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _obscurePassword = true;
   bool _rememberMe = false;
+
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+
   String? _errorMessage;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -28,31 +35,95 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
 
-  void _handleLogin() {
-    final username = _usernameController.text;
-    final password = _passwordController.text;
+  void _handleLogin() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
 
     setState(() {
       _errorMessage = null;
+      _isLoading = true;
     });
 
-    if (username.isNotEmpty && password.isNotEmpty) {
-      if (username == "admin" && password == "admin123") {
-        print('Login Berhasil! (Username: $username)');
-        print('Remember Me: $_rememberMe');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => HomeScreen()),
-              (route) => false,
-        );
-      } else {
+    if (username.isEmpty || password.isEmpty) {
+      setState(() {
+        _errorMessage = 'Username dan Password tidak boleh kosong!';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
         setState(() {
-          _errorMessage = "Username atau Password salah!";
+          _errorMessage = "Username tidak ditemukan!";
+        });
+        throw Exception('Username not found');
+      }
+
+      final userDoc = querySnapshot.docs.first;
+      final email = userDoc.data() as Map<String, dynamic>;
+
+      if (email['email'] == null) {
+        setState(() {
+          _errorMessage = "Terjadi kesalahan: Email tidak terdaftar untuk user ini.";
+        });
+        throw Exception('Email field missing');
+      }
+
+      final userEmail = email['email'];
+
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+          email: userEmail,
+          password: password
+      );
+
+      User? user = userCredential.user;
+
+      if (user != null) {
+        if (user.emailVerified) {
+          print('Login Berhasil! Username: $username, Email: $userEmail');
+          if (context.mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+            );
+          }
+        } else {
+          print('Login Gagal: Email belum terverifikasi.');
+          if (context.mounted) {
+            await user.sendEmailVerification();
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => VerificationScreen(email: userEmail)),
+            );
+          }
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print('Error Firebase: ${e.code}');
+      String message;
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = "Password salah!";
+      } else {
+        message = "Terjadi kesalahan. Silakan coba lagi.";
+      }
+      setState(() {
+        _errorMessage = message;
+      });
+    } catch (e) {
+      print(e.toString());
+    } finally {
+      if (context.mounted) {
+        setState(() {
+          _isLoading = false;
         });
       }
-    } else {
-      setState(() {
-        _errorMessage = "Username dan Password tidak boleh kosong!";
-      });
     }
   }
 
@@ -149,18 +220,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 30),
 
-                        // AnimatedSwitcher untuk ganti form
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                          },
-                          child: _isLogin
-                              ? _buildLoginForm(key: const ValueKey('login'))
-                              : const RegisterForm(key: ValueKey('register')),
+                        const SizedBox(height: 30),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _handleLogin,
+                            child: _isLoading
+                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                                : const Text('Login'),
+                          ),
                         ),
                       ],
                     ),
