@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'firebase_options.dart';
 import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
+import 'package:usulicius_kelompok_lucky/test/test_review.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 
@@ -117,7 +118,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const SplashScreen(),
+      home: const TestReview(),
     );
   }
 }
