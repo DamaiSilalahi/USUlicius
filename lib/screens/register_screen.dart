@@ -3,6 +3,8 @@ import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/verification_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/auth_toggle.dart';
 import 'package:usulicius_kelompok_lucky/widgets/status_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 const Color kPrimaryMaroonLight = Color(0xFFA04050);
@@ -21,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -30,26 +33,105 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _handleRegister() {
-    showStatusDialog(
-      context: context,
-      title: 'Check Your Email',
-      message: 'A verification code has been sent to your email.',
-      icon: Icons.email,
-      iconColor: kPrimaryMaroon,
-    ).then((_) {
+  void _handleRegister() async {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || email.isEmpty || password.isEmpty) {
+      showStatusDialog(
+        context: context,
+        title: 'Error',
+        message: 'Semua field tidak boleh kosong!',
+        icon: Icons.error,
+        iconColor: kDialogError,
+      );
+      return;
+    }
+
+    if (_isLoading) return;
+
+    setState(() { _isLoading = true; });
+
+    try {
+      final usernameCheck = await FirebaseFirestore.instance
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+
+      if (usernameCheck.docs.isNotEmpty) {
+        throw FirebaseAuthException(code: 'username-already-in-use');
+      }
+
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+          email: email,
+          password: password
+      );
+
+      User? user = userCredential.user;
+
+      if (user != null) {
+        await user.sendEmailVerification();
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set({
+          'username': username,
+          'email': email,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        if (mounted) {
+          showStatusDialog(
+            context: context,
+            title: 'Check Your Email',
+            message: 'Email verifikasi telah dikirim ke $email. Silakan cek inbox Anda.',
+            icon: Icons.email,
+            iconColor: kPrimaryMaroon,
+          ).then((_) {
+            if (mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => VerificationScreen(email: email),
+                ),
+                    (route) => false,
+              );
+            }
+          });
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message;
+      if (e.code == 'weak-password') {
+        message = 'Password terlalu lemah (minimal 6 karakter).';
+      } else if (e.code == 'email-already-in-use') {
+        message = 'Email ini sudah terdaftar. Silakan login.';
+      } else if (e.code == 'invalid-email') {
+        message = 'Format email tidak valid.';
+      } else if (e.code == 'username-already-in-use') {
+        message = 'Username "$username" sudah dipakai. Silakan ganti.';
+      } else {
+        message = 'Terjadi kesalahan. Silakan coba lagi.';
+        print('Firebase Error: ${e.message}');
+      }
+
       if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => VerificationScreen(
-              email: _emailController.text.isNotEmpty
-                  ? _emailController.text
-                  : 'your-email@example.com',
-            ),
-          ),
+        showStatusDialog(
+          context: context,
+          title: 'Registrasi Gagal',
+          message: message,
+          icon: Icons.error,
+          iconColor: kDialogError,
         );
       }
-    });
+    } finally {
+      if (mounted) {
+        setState(() { _isLoading = false; });
+      }
+    }
   }
 
   @override
@@ -101,7 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFBC8F9B).withOpacity(0.5),
                       borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(30)),
+                      const BorderRadius.vertical(top: Radius.circular(30)),
                     ),
                   ),
                 ),
@@ -110,7 +192,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(30)),
+                    BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
@@ -138,8 +220,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _handleRegister,
-                            child: const Text('Register'),
+                            onPressed: _isLoading ? null : _handleRegister,
+                            child: _isLoading
+                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                                : const Text('Register'),
                           ),
                         ),
                         const SizedBox(height: 20),
