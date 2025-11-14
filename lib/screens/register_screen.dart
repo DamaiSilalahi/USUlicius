@@ -138,6 +138,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kPrimaryMaroon,
+      // PERBAIKAN: Gunakan resizeToAvoidBottomInset: false agar UI
+      // tidak "penyet" saat keyboard muncul.
+      // Kita akan tangani scroll manual dengan padding di SingleChildScrollView.
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned(
@@ -195,7 +199,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
+                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 30).copyWith(
+                      bottom: 30 + MediaQuery.of(context).viewInsets.bottom,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -226,7 +232,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 : const Text('Register'),
                           ),
                         ),
-                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
