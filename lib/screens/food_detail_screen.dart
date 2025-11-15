@@ -1,3 +1,4 @@
+//food_detail_screen
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
@@ -67,16 +68,29 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
-        items: const [
+
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.fastfood),
+            icon: Image.asset(
+              'assets/images/food.png',
+              width: 24,
+              height: 24,
+              color: Colors.grey, // Warna tidak aktif
+            ),
+            // Ikon saat aktif
+            activeIcon: Image.asset(
+              'assets/images/food.png',
+              width: 24,
+              height: 24,
+              color: primaryColor, // Warna aktif (maroon)
+            ),
             label: 'Food',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
@@ -158,6 +172,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Judul
           Text(
             widget.title,
             style: const TextStyle(
@@ -166,6 +181,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
           const SizedBox(height: 8),
+
+          // Harga
           Text(
             widget.price,
             style: TextStyle(
@@ -176,6 +193,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 16),
 
+          // Rating
           Row(
             children: [
               ...List.generate(
@@ -372,12 +390,12 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           Divider(
             color: Colors.grey[300],
             thickness: 1,
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           Text(
             comment,
             style: const TextStyle(fontSize: 14),
