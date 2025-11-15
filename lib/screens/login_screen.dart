@@ -10,7 +10,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 const Color kPrimaryMaroon = Color(0xFF800020);
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  // ⭐️ 1. PERBAIKAN: Tambahkan parameter 'initialMessage'
+  final String? initialMessage;
+
+  // Hapus 'const' dan tambahkan 'initialMessage' ke constructor
+  const LoginScreen({super.key, this.initialMessage});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -23,7 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  String? _errorMessage;
+  String? _errorMessage; // Untuk error login (misal: password salah)
+  String? _successMessage; // ⭐️ 2. PERBAIKAN: State baru untuk pesan sukses
   bool _isLoading = false;
 
   @override
@@ -31,6 +36,24 @@ class _LoginScreenState extends State<LoginScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+  
+  // ⭐️ 3. PERBAIKAN: Tambahkan initState untuk menangani 'initialMessage'
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialMessage != null) {
+      _successMessage = widget.initialMessage;
+      
+      // Hilangkan pesan setelah 4 detik
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) {
+          setState(() {
+            _successMessage = null;
+          });
+        }
+      });
+    }
   }
 
 
@@ -231,6 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 16),
         _buildLoginExtras(),
 
+        // Ini adalah pesan ERROR (Merah)
         if (_errorMessage != null)
           Padding(
             padding: const EdgeInsets.only(top: 20.0),
@@ -264,6 +288,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 : const Text('Login'),
           ),
         ),
+        
+        // ⭐️ 4. PERBAIKAN: Tambahkan pesan SUKSES di sini (Hijau)
+        if (_successMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 20.0),
+            child: Text(
+              _successMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.green, // Sesuai gambar
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Roboto Flex',
+              ),
+            ),
+          ),
       ],
     );
   }

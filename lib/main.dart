@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'firebase_options.dart';
 import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
-import 'package:usulicius_kelompok_lucky/test/test_makanan_page.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 
