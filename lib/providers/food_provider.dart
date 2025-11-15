@@ -1,103 +1,96 @@
 // lib/providers/food_provider.dart
 import 'package:flutter/material.dart';
-import '../models/food.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FoodProvider with ChangeNotifier {
-  // Ini adalah "database" utama kita.
-  // Saya ambil semua data dummy dari file-file Anda dan satukan di sini.
-  final List<Food> _items = [
-    Food(
-      id: 'm1',
-      title: 'Ayam Geprek Mahasiswa',
-      imageUrl: 'https://cdn-2.tstatic.net/medan/foto/bank/images/Ayam-geprek-bensu-medan.jpg',
-      price: 'Rp. 10.000',
-      rating: 5,
-      location: 'Jl. Pembangunan No.117Padang, BulanKec, Kec. Medan Baru, Kota Medan',
-      description: 'Ayam geprek Mahasiswa disajikan bersama nasi hangat, lengkap dengan tambahan lauk seperti tempe, terong goreng dan segelas teh manis dingin yang menyegarkan. Dengan harga yang sangat terjangkau, Geprek Mahasiswa menawarkan perpaduan rasa yang nikmat, porsi yang mengenyangkan, serta suasana santai yang membuatnya semakin cocok sebagai tempat makan sehari-hari bagi mahasiswa.',
-      categories: [FoodCategory.Pedas, FoodCategory.PilihanMahasiswa],
-    ),
-    Food(
-      id: 'm2',
-      title: 'Pancong Lumer USU',
-      imageUrl: 'https://picsum.photos/id/45/200',
-      price: 'Rp. 12.000',
-      rating: 5,
-      location: 'Pintu 4, USU',
-      description: 'Deskripsi lengkap untuk Pancong Lumer USU...',
-      categories: [FoodCategory.Manis, FoodCategory.PilihanMahasiswa],
-    ),
-    Food(
-      id: 'm3',
-      title: 'Nasi baby cumi sambal ijo',
-      imageUrl: 'https://picsum.photos/id/21/200',
-      price: 'Rp. 18.000',
-      rating: 5,
-      location: 'Jl. Sei Serayu No.97',
-      description: 'Deskripsi lengkap untuk Nasi baby cumi...',
-      categories: [FoodCategory.Pedas, FoodCategory.PilihanMahasiswa],
-    ),
-    Food(
-      id: 'm4',
-      title: 'Mie bakso mercon',
-      imageUrl: 'https://picsum.photos/id/102/200',
-      price: 'Rp. 15.000',
-      rating: 5,
-      location: 'Jalan Pembangunan',
-      description: 'Deskripsi lengkap untuk Mie Bakso Mercon...',
-      categories: [FoodCategory.Pedas],
-    ),
-    Food(
-      id: 'm5',
-      title: 'Pancake Durian',
-      imageUrl: 'https://picsum.photos/id/106/200',
-      price: 'Rp. 15.000',
-      rating: 5,
-      location: 'Dr. mansyur',
-      description: 'Deskripsi lengkap untuk Pancake Durian...',
-      categories: [FoodCategory.Manis],
-    ),
-    Food(
-      id: 'm6',
-      title: 'Napoleon Cake',
-      imageUrl: 'https://picsum.photos/id/107/200',
-      price: 'Rp. 20.000',
-      rating: 5,
-      location: 'Jl. Sei Serayu No.97',
-      description: 'Deskripsi lengkap untuk Napoleon Cake...',
-      categories: [FoodCategory.Manis],
-    ),
-  ];
+  // Kita akan gunakan ID user dummy dari file tes Anda
+  final String _userID = 'dummy_user_001';
 
-  // Getter untuk mengambil semua item makanan
-  List<Food> get items {
-    return [..._items];
+  // Set untuk menyimpan ID makanan yang disukai.
+  Set<String> _likedFoods = {};
+
+  // Constructor: Panggil loadFavorites() saat provider dibuat
+  FoodProvider() {
+    loadFavorites();
   }
 
-  // Getter untuk mengambil HANYA item yang difavoritkan
-  // Ini yang akan digunakan oleh FavoriteScreen
-  List<Food> get favoriteItems {
-    return _items.where((item) => item.isFavorite).toList();
+  // Getter untuk UI
+  Set<String> get likedFoods => _likedFoods;
+
+  // 1. Ambil daftar favorit dari Firestore
+  Future<void> loadFavorites() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .where('userID', isEqualTo: _userID)
+          .get();
+
+      _likedFoods = snapshot.docs
+          .map((doc) => doc['foodID'] as String)
+          .toSet();
+
+      notifyListeners(); // Beri tahu UI
+    } catch (e) {
+      print("Gagal load favorites: $e");
+    }
   }
 
-  // Getter untuk mengambil item rekomendasi di home (saya ambil 4)
-  List<Food> get recommendedItems {
-    return _items.take(4).toList();
+  // 2. Tambah favorit ke Firestore
+  Future<void> addFavorite(String foodID) async {
+    try {
+      // Update state lokal dulu agar UI cepat
+      _likedFoods.add(foodID);
+      notifyListeners();
+
+      // Kirim ke Firestore
+      await FirebaseFirestore.instance.collection('favorites').add({
+        'foodID': foodID,
+        'userID': _userID,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // Jika gagal, batalkan
+      _likedFoods.remove(foodID);
+      notifyListeners();
+      print("Gagal tambah favorit: $e");
+    }
   }
 
-  // Getter untuk mengambil item berdasarkan kategori
-  List<Food> getItemsByCategory(FoodCategory category) {
-    return _items.where((item) => item.categories.contains(category)).toList();
+  // 3. Hapus favorit dari Firestore
+  Future<void> removeFavorite(String foodID) async {
+    try {
+      // Update state lokal dulu
+      _likedFoods.remove(foodID);
+      notifyListeners();
+
+      // Hapus dari Firestore
+      final query = await FirebaseFirestore.instance
+          .collection('favorites')
+          .where('foodID', isEqualTo: foodID)
+          .where('userID', isEqualTo: _userID)
+          .get();
+
+      for (var doc in query.docs) {
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      // Jika gagal, kembalikan
+      _likedFoods.add(foodID);
+      notifyListeners();
+      print("Gagal hapus favorit: $e");
+    }
   }
 
-  // Getter untuk mencari 1 item berdasarkan ID
-  Food findById(String id) {
-    return _items.firstWhere((item) => item.id == id);
+  // 4. Fungsi Toggle (yang akan dipanggil UI)
+  void toggleFavoriteStatus(String foodID) {
+    if (_likedFoods.contains(foodID)) {
+      removeFavorite(foodID);
+    } else {
+      addFavorite(foodID);
+    }
+    // notifyListeners() sudah dipanggil di dalam add/remove
   }
 
-  // FUNGSI UTAMA: Mengubah status favorit
-  void toggleFavoriteStatus(String id) {
-    final food = findById(id);
-    food.isFavorite = !food.isFavorite; // Ubah statusnya
-    notifyListeners(); // Beri tahu semua widget yang mendengarkan
-  }
+// File food.dart sekarang tidak diperlukan lagi
+// karena kita akan membaca data langsung dari Firestore.
 }

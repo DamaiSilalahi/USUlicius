@@ -1,14 +1,14 @@
+// lib/screens/category_screen.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:usulicius_kelompok_lucky/models/food.dart';
-import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/food_detail_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/food_card.dart';
 
 class CategoryScreen extends StatelessWidget {
   final String title;
   final String subtitle;
-  final FoodCategory category;
+  final String category;
 
   const CategoryScreen({
     Key? key,
@@ -17,13 +17,24 @@ class CategoryScreen extends StatelessWidget {
     required this.category,
   }) : super(key: key);
 
+  // Fungsi helper dari test_makanan_page.dart
+  String buildImagePath(String rawImage) {
+    if (rawImage.isEmpty) return "";
+    return rawImage.startsWith("assets/")
+        ? rawImage
+        : "assets/images/${rawImage.split('/').last}";
+  }
+
   @override
   Widget build(BuildContext context) {
-    final foodProvider = Provider.of<FoodProvider>(context);
-    final foodItems = foodProvider.getItemsByCategory(category);
+    final Stream<QuerySnapshot> foodStream = FirebaseFirestore.instance
+        .collection('foods')
+        .where('category', isEqualTo: category)
+        .snapshots();
 
     return Scaffold(
       appBar: AppBar(
+        // ... (AppBar tidak berubah)
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         toolbarHeight: 86,
@@ -67,35 +78,56 @@ class CategoryScreen extends StatelessWidget {
               ),
             ),
           ),
+
           Expanded(
-            child: ListView.builder(
-              itemCount: foodItems.length,
-              itemBuilder: (ctx, index) {
-                final food = foodItems[index];
-                return FoodCard(
-                  imageUrl: food.imageUrl,
-                  title: food.title,
-                  location: food.location,
-                  rating: food.rating.toString(),
-                  isFavorite: food.isFavorite,
-                  onFavoritePressed: () {
-                    foodProvider.toggleFavoriteStatus(food.id);
-                  },
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => FoodDetailScreen(
-                          originIndex: 0,
-                          foodId: food.id,
-                          imageUrl: food.imageUrl,
-                          title: food.title,
-                          price: food.price,
-                          rating: food.rating,
-                          location: food.location,
-                          description: food.description,
-                        ),
-                      ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: foodStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text("Tidak ada makanan di kategori ini"));
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  itemCount: docs.length,
+                  itemBuilder: (ctx, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final foodId = doc.id;
+
+                    // === PERUBAHAN DI SINI ===
+                    final String imagePath = buildImagePath(data['image'] ?? '');
+                    final String price = (data['price'] ?? 0).toString();
+                    final int rating = (data['rating'] ?? 0.0).toInt();
+
+                    return FoodCard(
+                      foodId: foodId,
+                      imageUrl: imagePath, // <-- Kirim path asset
+                      title: data['name'] ?? 'Tanpa Nama',
+                      location: data['location'] ?? 'Tanpa Lokasi',
+                      rating: rating.toString(),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => FoodDetailScreen(
+                              originIndex: 0,
+                              foodId: foodId,
+                              imageUrl: imagePath,
+                              title: data['name'] ?? 'Tanpa Nama',
+                              price: "Rp $price",
+                              // rating: rating, // <-- HAPUS BARIS INI
+                              location: data['location'] ?? 'Tanpa Lokasi',
+                              description: data['description'] ?? 'Tanpa Deskripsi',
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

@@ -1,3 +1,6 @@
+// lib/screens/favorite_screen.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
@@ -7,50 +10,88 @@ import 'package:usulicius_kelompok_lucky/screens/food_detail_screen.dart';
 class FavoriteScreen extends StatelessWidget {
   const FavoriteScreen({super.key});
 
+  // Fungsi helper dari test_makanan_page.dart
+  String buildImagePath(String rawImage) {
+    if (rawImage.isEmpty) return "";
+    return rawImage.startsWith("assets/")
+        ? rawImage
+        : "assets/images/${rawImage.split('/').last}";
+  }
+
   @override
   Widget build(BuildContext context) {
     final foodProvider = Provider.of<FoodProvider>(context);
-    final favoriteItems = foodProvider.favoriteItems;
+    final likedFoodIds = foodProvider.likedFoods;
 
-    return favoriteItems.isEmpty
-        ? const EmptyFavoriteState()
-        : ListView.builder(
-      padding: const EdgeInsets.only(top: 23.0),
-      itemCount: favoriteItems.length,
-      itemBuilder: (ctx, index) {
-        final food = favoriteItems[index];
-        return FoodCard(
-          imageUrl: food.imageUrl,
-          title: food.title,
-          location: food.location,
-          rating: food.rating.toString(),
-          isFavorite: food.isFavorite,
-          onFavoritePressed: () {
-            foodProvider.toggleFavoriteStatus(food.id);
-          },
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FoodDetailScreen(
-                  originIndex: 1,
-                  foodId: food.id,
-                  imageUrl: food.imageUrl,
-                  title: food.title,
-                  price: food.price,
-                  rating: food.rating,
-                  location: food.location,
-                  description: food.description,
-                ),
-              ),
-            );
-          },
-        );
-      },
+    if (likedFoodIds.isEmpty) {
+      return const EmptyFavoriteState();
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('foods').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("Data makanan tidak ditemukan."));
+          }
+
+          final allFoods = snapshot.data!.docs;
+
+          final favoriteItems = allFoods.where((doc) {
+            return likedFoodIds.contains(doc.id);
+          }).toList();
+
+          if (favoriteItems.isEmpty) {
+            return const EmptyFavoriteState();
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.only(top: 8.0),
+            itemCount: favoriteItems.length,
+            itemBuilder: (ctx, index) {
+              final doc = favoriteItems[index];
+              final data = doc.data() as Map<String, dynamic>;
+              final foodId = doc.id;
+
+              // === PERUBAHAN DI SINI ===
+              final String imagePath = buildImagePath(data['image'] ?? '');
+              final String price = (data['price'] ?? 0).toString();
+              final int rating = (data['rating'] ?? 0.0).toInt();
+
+              return FoodCard(
+                foodId: foodId,
+                imageUrl: imagePath, // <-- Kirim path asset
+                title: data['name'] ?? 'Tanpa Nama',
+                location: data['location'] ?? 'Tanpa Lokasi',
+                rating: rating.toString(),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FoodDetailScreen(
+                        originIndex: 0,
+                        foodId: foodId,
+                        imageUrl: imagePath,
+                        title: data['name'] ?? 'Tanpa Nama',
+                        price: "Rp $price",
+                        // rating: rating, // <-- HAPUS BARIS INI
+                        location: data['location'] ?? 'Tanpa Lokasi',
+                        description: data['description'] ?? 'Tanpa Deskripsi',
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        }
     );
   }
 }
 
+// (Widget EmptyFavoriteState ada di bawah sini, tidak berubah)
 class EmptyFavoriteState extends StatelessWidget {
   const EmptyFavoriteState({super.key});
 

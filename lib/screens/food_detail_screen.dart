@@ -1,4 +1,6 @@
-//food_detail_screen
+// lib/screens/food_detail_screen.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
@@ -10,7 +12,7 @@ class FoodDetailScreen extends StatefulWidget {
   final String imageUrl;
   final String title;
   final String price;
-  final int rating;
+  // final int rating; // <-- 1. HAPUS INI
   final String location;
   final String description;
 
@@ -21,7 +23,7 @@ class FoodDetailScreen extends StatefulWidget {
     required this.imageUrl,
     required this.title,
     required this.price,
-    required this.rating,
+    // required this.rating, // <-- 2. HAPUS INI
     required this.location,
     required this.description,
   });
@@ -31,14 +33,13 @@ class FoodDetailScreen extends StatefulWidget {
 }
 
 class _FoodDetailScreenState extends State<FoodDetailScreen> {
+  final String _userID = 'dummy_user_001';
 
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
-
     final foodProvider = Provider.of<FoodProvider>(context);
-    final food = foodProvider.findById(widget.foodId);
-    final bool isFavorite = food.isFavorite;
+    final bool isFavorite = foodProvider.likedFoods.contains(widget.foodId);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -51,6 +52,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        // ... (BottomNav tidak berubah)
         currentIndex: widget.originIndex,
         onTap: (index) {
           if (index == widget.originIndex) {
@@ -68,21 +70,19 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
-
         items: [
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/images/food.png',
               width: 24,
               height: 24,
-              color: Colors.grey, // Warna tidak aktif
+              color: Colors.grey,
             ),
-            // Ikon saat aktif
             activeIcon: Image.asset(
               'assets/images/food.png',
               width: 24,
               height: 24,
-              color: primaryColor, // Warna aktif (maroon)
+              color: primaryColor,
             ),
             label: 'Food',
           ),
@@ -100,34 +100,49 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   }
 
   Widget _buildImageHeader(bool isFavorite, FoodProvider foodProvider) {
+    // ... (Fungsi ini tidak berubah)
     return Stack(
       children: [
-        Container(
+        SizedBox(
           height: 350,
           width: double.infinity,
-          decoration: BoxDecoration(
+          child: ClipRRect(
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(20.0),
               bottomRight: Radius.circular(20.0),
             ),
-            image: DecorationImage(
-              image: NetworkImage(widget.imageUrl),
+            child: widget.imageUrl.isNotEmpty
+                ? Image.asset(
+              widget.imageUrl,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                print("Error load asset di Detail: ${widget.imageUrl}");
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                );
+              },
+            )
+                : Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
             ),
           ),
-          child: Container(
-            decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20.0),
-                  bottomRight: Radius.circular(20.0),
-                ),
-                gradient: LinearGradient(
-                    colors: [Colors.black.withOpacity(0.5), Colors.transparent],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: const [0.0, 0.4]
-                )
-            ),
+        ),
+        Container(
+          height: 350,
+          width: double.infinity,
+          decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20.0),
+                bottomRight: Radius.circular(20.0),
+              ),
+              gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.4]
+              )
           ),
         ),
         Positioned(
@@ -166,13 +181,13 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
+  // === 3. FUNGSI _buildContent DIPERBARUI ===
   Widget _buildContent() {
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Judul
           Text(
             widget.title,
             style: const TextStyle(
@@ -182,7 +197,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Harga
           Text(
             widget.price,
             style: TextStyle(
@@ -193,35 +207,35 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Rating
-          Row(
-            children: [
-              ...List.generate(
-                widget.rating,
-                    (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '(${widget.rating.toString()})',
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(width: 12),
+          // === 4. TAMBAHKAN STREAMBUILDER UNTUK RATING ===
+          StreamBuilder<QuerySnapshot>(
+              stream: _getReviews(), // Panggil stream review
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  // Tampilkan 0 bintang saat loading
+                  return _buildRatingStars(0, 0);
+                }
 
-              InkWell(
-                onTap: () {
-                  _showReviewSheet(context);
-                },
-                child: Text(
-                  'Lihat Review',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ],
+                final reviews = snapshot.data!.docs;
+                if (reviews.isEmpty) {
+                  // Tampilkan 0 bintang jika tidak ada review
+                  return _buildRatingStars(0, 0);
+                }
+
+                // Hitung rata-rata
+                double totalRating = 0;
+                for (var doc in reviews) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  totalRating += (data['rating'] ?? 0.0);
+                }
+                final avgRating = totalRating / reviews.length;
+
+                // Tampilkan bintang
+                return _buildRatingStars(avgRating.round(), reviews.length);
+              }
           ),
+          // ===========================================
+
           const SizedBox(height: 16),
 
           Row(
@@ -273,6 +287,55 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
+  // === 5. BUAT WIDGET BARU UNTUK BINTANG RATING ===
+  Widget _buildRatingStars(int rating, int reviewCount) {
+    return Row(
+      children: [
+        ...List.generate(
+          rating, // Gunakan rating yang dihitung
+              (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
+        ),
+        // Tampilkan bintang kosong sisanya
+        ...List.generate(
+          5 - rating,
+              (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '($reviewCount)', // Tampilkan jumlah review
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        const SizedBox(width: 12),
+
+        InkWell(
+          onTap: () {
+            _showReviewSheet(context);
+          },
+          child: Text(
+            'Lihat Review',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // === (Sisa kode: _getReviews, _showReviewSheet, _buildSheetHeader,
+  //      _buildReviewItem, _showAddReviewDialog TIDAK BERUBAH dari
+  //      respons saya sebelumnya) ===
+
+  Stream<QuerySnapshot> _getReviews() {
+    return FirebaseFirestore.instance
+        .collection('reviews')
+        .where('foodID', isEqualTo: widget.foodId)
+        .orderBy('date', descending: true)
+        .snapshots();
+  }
+
   void _showReviewSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -294,24 +357,44 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               const SizedBox(height: 16),
 
               Expanded(
-                child: ListView(
-                  children: [
-                    _buildReviewItem(
-                      'Asna',
-                      '29 September 2025',
-                      'Sangat rekomendasi buat pelajar',
-                    ),
-                    _buildReviewItem(
-                      'Damai',
-                      '28 September 2025',
-                      'Rasanya enakkk!!!!!!!!',
-                    ),
-                    _buildReviewItem(
-                      'Katherine',
-                      '28 September 2025',
-                      'Harganya murah, cocok untuk anak kost.',
-                    ),
-                  ],
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _getReviews(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(child: Text('Belum ada review.'));
+                    }
+
+                    final data = snapshot.data!.docs;
+
+                    return ListView.builder(
+                      itemCount: data.length,
+                      itemBuilder: (context, index) {
+                        final doc = data[index];
+                        final d = doc.data() as Map<String, dynamic>;
+
+                        String tanggal = "";
+                        if (d['date'] != null) {
+                          final Timestamp t = d['date'];
+                          final DateTime dt = t.toDate();
+                          final bulan = [
+                            "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+                            "Jul", "Ags", "Sep", "Okt", "Nov", "Des"
+                          ];
+                          tanggal = "${dt.day} ${bulan[dt.month - 1]} ${dt.year}";
+                        }
+
+                        return _buildReviewItem(
+                          d['userID'] ?? 'User',
+                          tanggal,
+                          d['comment'] ?? '-',
+                          (d['rating'] ?? 0.0).toInt(),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ],
@@ -356,7 +439,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  Widget _buildReviewItem(String name, String date, String comment) {
+  Widget _buildReviewItem(String name, String date, String comment, int rating) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
@@ -388,6 +471,18 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   ),
                 ],
               ),
+              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(
+                  rating,
+                      (i) => const Icon(
+                    Icons.star,
+                    color: Colors.amber,
+                    size: 18,
+                  ),
+                ),
+              )
             ],
           ),
           const SizedBox(height: 8),
@@ -407,7 +502,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
   void _showAddReviewDialog(BuildContext context) {
     final TextEditingController _reviewController = TextEditingController();
-    int _rating = 0;
+    double _rating = 0;
     String _reviewHintText = 'Review';
     bool _hasReviewError = false;
     String? _ratingErrorText;
@@ -490,7 +585,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                             GestureDetector(
                               onTap: () {
                                 stateSetter(() {
-                                  _rating = i + 1;
+                                  _rating = i + 1.0;
                                   _ratingErrorText = null;
                                 });
                               },
@@ -535,9 +630,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               padding: buttonPadding,
                             ),
                             child: const Text('Kirim'),
-                            onPressed: () {
+                            onPressed: () async {
                               bool isValid = true;
-                              final String reviewText = _reviewController.text;
+                              final String reviewText = _reviewController.text.trim();
 
                               stateSetter(() {
                                 if (reviewText.isEmpty) {
@@ -549,7 +644,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                   _hasReviewError = false;
                                 }
 
-                                if (_rating == 0) {
+                                if (_rating == 0.0) {
                                   _ratingErrorText = 'Rating cannot be empty';
                                   isValid = false;
                                 } else {
@@ -558,7 +653,19 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               });
 
                               if (isValid) {
-                                Navigator.pop(dialogContext);
+                                try {
+                                  await FirebaseFirestore.instance.collection('reviews').add({
+                                    'comment': reviewText,
+                                    'rating': _rating,
+                                    'foodID': widget.foodId,
+                                    'userID': _userID,
+                                    'date': Timestamp.now(),
+                                  });
+                                  print('✅ Review berhasil ditambahkan!');
+                                  Navigator.pop(dialogContext);
+                                } catch (e) {
+                                  print('❌ Gagal menambahkan review: $e');
+                                }
                               }
                             },
                           ),
