@@ -1,3 +1,4 @@
+//home_screen
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/models/food.dart';
@@ -69,20 +70,36 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
-        items: const [
+
+        // === PERUBAHAN DI SINI ===
+        items: [ // <-- 'const' dihapus
           BottomNavigationBarItem(
-            icon: Icon(Icons.fastfood),
+            // Ikon saat tidak aktif
+            icon: Image.asset(
+              'assets/images/food.png',
+              width: 24,
+              height: 24,
+              color: Colors.grey, // Warna tidak aktif
+            ),
+            // Ikon saat aktif
+            activeIcon: Image.asset(
+              'assets/images/food.png',
+              width: 24,
+              height: 24,
+              color: primaryColor, // Warna aktif (maroon)
+            ),
             label: 'Food',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
+        // ========================
       ),
     );
   }
