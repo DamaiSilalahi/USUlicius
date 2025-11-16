@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/widgets/account_field.dart';
 import 'package:usulicius_kelompok_lucky/screens/change_email_screen.dart';
-import 'package:usulicius_kelompok_lucky/widgets/upload_picture_dialog.dart';
 import 'package:usulicius_kelompok_lucky/widgets/photo_profile.dart';
 import 'package:usulicius_kelompok_lucky/widgets/delete_account.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class AccountScreen extends StatefulWidget {
   final String initialName;
@@ -23,6 +27,12 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
+  final User? _user = FirebaseAuth.instance.currentUser;
+  final _firestore = FirebaseFirestore.instance;
+
+  File? _pickedImageFile;
+  final ImagePicker _picker = ImagePicker();
+  bool _isLoading = false;
   late String _currentName;
   late String _currentEmail;
   late String _currentPassword;
@@ -30,9 +40,9 @@ class _AccountScreenState extends State<AccountScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmNewPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   bool _isPasswordChanging = false;
-  final _formKey = GlobalKey<FormState>();
   String? _successMessage;
   String? _nameError;
   String? _newPasswordError;
@@ -55,71 +65,108 @@ class _AccountScreenState extends State<AccountScreen> {
     super.dispose();
   }
 
-  void _saveChanges() {
+  void _saveChanges() async {
     setState(() {
       _nameError = null;
       _successMessage = null;
       _newPasswordError = null;
       _confirmNewPasswordError = null;
+      _isLoading = true;
     });
 
+    final newName = _nameController.text.trim();
+    bool isNameChanged = newName != _currentName;
     bool validationPassed = true;
+    String successMessage = '';
 
-    if (_nameController.text.isEmpty) {
-      setState(() {
-        _nameError = 'Name cannot be empty';
-      });
+    if (newName.isEmpty) {
+      setState(() => _nameError = 'Name cannot be empty');
       validationPassed = false;
     }
 
     if (_isPasswordChanging) {
-      if (_newPasswordController.text.isEmpty) {
-        setState(() {
-          _newPasswordError = 'New Password cannot be empty';
-        });
+      final newPassword = _newPasswordController.text;
+      final confirmPassword = _confirmNewPasswordController.text;
+
+      if (newPassword.isEmpty) {
+        setState(() => _newPasswordError = 'New Password cannot be empty');
         validationPassed = false;
       }
-      if (_confirmNewPasswordController.text.isEmpty) {
-        setState(() {
-          _confirmNewPasswordError = 'Confirm New Password cannot be empty';
-        });
+      if (confirmPassword.isEmpty) {
+        setState(() => _confirmNewPasswordError = 'Confirm New Password cannot be empty');
+        validationPassed = false;
+      }
+      if (validationPassed && newPassword.length < 6) {
+        setState(() => _newPasswordError = 'Password must be at least 6 chars');
+        validationPassed = false;
+      }
+      if (validationPassed && newPassword != confirmPassword) {
+        setState(() => _confirmNewPasswordError = 'New passwords do not match');
         validationPassed = false;
       }
     }
 
     if (!validationPassed) {
+      setState(() => _isLoading = false);
       return;
     }
 
-    if (_nameController.text != _currentName) {
-      setState(() {
-        _currentName = _nameController.text;
-        _successMessage = 'Name updated successfully.';
-      });
-      Navigator.pop(context);
+    if (!isNameChanged && !_isPasswordChanging) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No changes detected.')));
       return;
     }
 
-    if (_isPasswordChanging) {
-      if (_newPasswordController.text == _confirmNewPasswordController.text) {
+    try {
+      if (isNameChanged) {
+        if (_user == null) throw Exception("No user is logged in.");
+
+        await _user.updateDisplayName(newName);
+
+        final query = await _firestore
+            .collection('users')
+            .where('email', isEqualTo: _user.email)
+            .limit(1)
+            .get();
+        
+        if (query.docs.isNotEmpty) {
+          await _firestore
+              .collection('users')
+              .doc(query.docs.first.id)
+              .update({'username': newName});
+        }
+        
+        setState(() => _currentName = newName);
+        successMessage = 'Name updated successfully. ';
+      }
+
+      if (_isPasswordChanging) {
+        print("Simulasi ganti password ke: ${_newPasswordController.text}");
+        
         setState(() {
-          _currentPassword = '••••••••••';
           _isPasswordChanging = false;
-          _successMessage = 'Password updated successfully.';
           _newPasswordController.clear();
           _confirmNewPasswordController.clear();
         });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('New passwords do not match.')),
-        );
-        return;
-      }
-    }
 
-    if (_successMessage == null) {
+        successMessage += 'Password updated (simulation).';
+      }
+
+      setState(() {
+        _isLoading = false;
+        _successMessage = successMessage.trim();
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No changes detected.')),
+        SnackBar(content: Text(_successMessage!)),
+      );
+      
+      Navigator.pop(context);
+
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: ${e.toString()}')),
       );
     }
   }
@@ -129,25 +176,38 @@ class _AccountScreenState extends State<AccountScreen> {
       context: context,
       builder: (context) => ChangeEmailScreen(currentEmail: _currentEmail),
     );
-
     if (newEmail != null) {
       setState(() {
         _currentEmail = newEmail;
-        _successMessage = 'Verification successfull.';
+        _successMessage = 'Verification successful. (SIMULASI)';
       });
     }
   }
 
   Future<void> _showUploadPictureDialog() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => const UploadPictureDialog(),
-    );
+    _pickImage(ImageSource.gallery);
+  }
 
-    if (result == 'file_chosen' && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Picture uploaded (simulation)!')),
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(source: source, imageQuality: 50, maxWidth: 600);
+
+    if (image == null) return;
+
+    setState(() {
+      _pickedImageFile = File(image.path);
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Picture selected!')));
+  }
+
+  Widget _buildProfileAvatar() {
+    if (_pickedImageFile != null) {
+      return CircleAvatar(
+        radius: 60,
+        backgroundImage: FileImage(_pickedImageFile!),
       );
+    } else {
+      return const ProfileAvatar(radius: 60, iconSize: 70);
     }
   }
 
@@ -185,16 +245,16 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const ProfileAvatar(radius: 60, iconSize: 70),
+              _buildProfileAvatar(),
               const SizedBox(height: 10),
               SizedBox(
                 width: 150,
                 child: ElevatedButton(
                   onPressed: _showUploadPictureDialog,
-                  child: const Text('Upload a picture'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B0000),
                   ),
+                  child: const Text('Upload a picture'),
                 ),
               ),
               const SizedBox(height: 30),
@@ -259,7 +319,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                       ),
                       Text(
-                        'Deleting your account will remove all your personal data and preferences. This action cannot be reversed.',
+                        'Deleting your account will remove all your data. This action cannot be reversed.',
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
@@ -282,8 +342,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.black)),
+                      onPressed: _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.grey.shade400,
                         side: BorderSide.none,
@@ -292,13 +351,13 @@ class _AccountScreenState extends State<AccountScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                      child: const Text('Cancel', style: TextStyle(color: Colors.black)),
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _saveChanges,
-                      child: const Text('Save'),
+                      onPressed: _isLoading ? null : _saveChanges,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8B0000),
                         padding: const EdgeInsets.symmetric(vertical: 15),
@@ -306,6 +365,13 @@ class _AccountScreenState extends State<AccountScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                            )
+                          : const Text('Save'),
                     ),
                   ),
                 ],

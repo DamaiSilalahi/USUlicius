@@ -96,7 +96,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         backgroundColor: kPrimaryMaroon,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color.fromARGB(255, 255, 255, 255)),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -107,7 +107,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.email_outlined, color: Colors.white, size: 100),
+              const Icon(Icons.email_outlined, color: Color.fromARGB(255, 255, 255, 255), size: 100),
               const SizedBox(height: 30),
 
               const Text(
@@ -115,7 +115,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Color.fromARGB(255, 255, 255, 255),
                   fontFamily: 'Roboto Flex',
                 ),
               ),
@@ -125,7 +125,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 'Kami telah mengirimkan link verifikasi ke email:\n${widget.email}\n\nSilakan klik link tersebut untuk mengaktifkan akun Anda.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: Color.fromARGB(179, 255, 255, 255),
                   fontSize: 16,
                   height: 1.5,
                   fontFamily: 'Roboto Flex',
