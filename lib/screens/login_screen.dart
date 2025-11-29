@@ -22,14 +22,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
-
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   
+  // Variable untuk error per field (Input kosong)
   String? _usernameError;
   String? _passwordError;
+  
+  // Variable untuk error umum (Login gagal / Invalid credentials)
   String? _generalError;
   
   String? _successMessage; 
@@ -61,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
+    // Reset semua error sebelum validasi dimulai
     setState(() {
       _usernameError = null;
       _passwordError = null;
@@ -69,43 +72,46 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    bool hasError = false;
+    // 1. VALIDASI INPUT KOSONG (Muncul di bawah kolom teks)
+    bool hasEmptyError = false;
     if (username.isEmpty) {
       setState(() => _usernameError = 'Username cannot be empty');
-      hasError = true;
+      hasEmptyError = true;
     }
     if (password.isEmpty) {
       setState(() => _passwordError = 'Password cannot be empty');
-      hasError = true;
+      hasEmptyError = true;
     }
 
-    if (hasError) {
+    if (hasEmptyError) {
       setState(() => _isLoading = false);
       return;
     }
 
+    // 2. VALIDASI DATABASE & AUTH (Muncul sebagai banner kotak merah)
     try {
+      // Cari username di Firestore
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('username', isEqualTo: username)
           .limit(1)
           .get();
 
+      // Jika username tidak ditemukan di database
       if (querySnapshot.docs.isEmpty) {
-        setState(() => _usernameError = "Username tidak ditemukan!");
-        throw Exception('Username not found');
+        throw Exception('Invalid Credentials'); 
       }
 
       final userDoc = querySnapshot.docs.first;
-      final email = userDoc.data() as Map<String, dynamic>;
+      final userData = userDoc.data() as Map<String, dynamic>;
 
-      if (email['email'] == null) {
-        setState(() => _generalError = "Terjadi kesalahan: Email tidak terdaftar.");
+      if (userData['email'] == null) {
         throw Exception('Email field missing');
       }
 
-      final userEmail = email['email'];
+      final userEmail = userData['email'];
 
+      // Coba Login ke Firebase Auth
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: userEmail, password: password);
 
@@ -129,14 +135,13 @@ class _LoginScreenState extends State<LoginScreen> {
           }
         }
       }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        setState(() => _passwordError = "Password salah!");
-      } else {
-        setState(() => _generalError = "Terjadi kesalahan. Silakan coba lagi.");
-      }
     } catch (e) {
-      print(e.toString());
+      // Tangkap SEMUA error login (Password salah atau Username tidak ada)
+      // dan tampilkan satu pesan error umum
+      setState(() {
+        _generalError = "Invalid username and/or password";
+      });
+      // Debug print jika perlu: print(e.toString());
     } finally {
       if (mounted) {
         setState(() {
@@ -153,6 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: kPrimaryMaroon,
       body: Stack(
         children: [
+          // Bagian Header Logo
           Positioned(
             top: 0,
             left: 0,
@@ -183,6 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           
+          // Bagian Putih (Form)
           Positioned(
             top: MediaQuery.of(context).size.height * 0.38,
             left: 0,
@@ -192,59 +199,51 @@ class _LoginScreenState extends State<LoginScreen> {
               fit: StackFit.expand,
               alignment: Alignment.topCenter,
               children: [
+                // Layer transparan di belakang
                 Padding(
-                  padding: const EdgeInsets.only(
-                    top: 0,
-                    left: 10,
-                    right: 10,
-                  ),
+                  padding: const EdgeInsets.only(top: 0, left: 10, right: 10),
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFFBC8F9B).withOpacity(0.5),
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(30)),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                     ),
                   ),
                 ),
                 
+                // Container Putih Utama
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(30)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: SingleChildScrollView(
-                    padding:
-                        const EdgeInsets.fromLTRB(24, 30, 24, 30).copyWith(
+                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 30).copyWith(
                       bottom: 30 + MediaQuery.of(context).viewInsets.bottom,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        // Toggle Login / Register
                         AuthToggle(
                           isLogin: _isLogin,
                           onLoginTap: () {
-                            if (!_isLogin) {
-                              setState(() => _isLogin = true);
-                            }
+                            if (!_isLogin) setState(() => _isLogin = true);
                           },
                           onRegisterTap: () {
-                            if (_isLogin) {
-                              setState(() => _isLogin = false);
-                            }
+                            if (_isLogin) setState(() => _isLogin = false);
                           },
                         ),
                         const SizedBox(height: 30),
 
+                        // Pesan Sukses (misal setelah register)
                         if (_successMessage != null)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 20.0),
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
+                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                               decoration: BoxDecoration(
                                 color: kDialogSuccess.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
@@ -262,37 +261,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
 
-                        if (_generalError != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 20.0),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _generalError!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 13,
-                                  fontFamily: 'Roboto Flex',
-                                ),
-                              ),
-                            ),
-                          ),
-
+                        // Form Utama
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
-                          transitionBuilder:
-                              (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return FadeTransition(opacity: animation, child: child);
                           },
                           child: _isLogin
                               ? _buildLoginForm(key: const ValueKey('login'))
@@ -315,6 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // Widget TextField yang dimodifikasi
   Widget _buildAuthTextField({
     required TextEditingController controller,
     required String hintText,
@@ -326,58 +300,68 @@ class _LoginScreenState extends State<LoginScreen> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     final bool hasError = errorText != null;
-    final String currentLabel = hasError ? errorText : hintText;
+    final String currentLabel = hintText; // Label tetap sebagai hint
     final Color currentColor = hasError ? kDialogError : kPrimaryMaroon;
 
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: const TextStyle(
-        color: Colors.black,
-        fontSize: 16,
-        fontFamily: 'Roboto Flex',
-        fontWeight: FontWeight.w700,
-      ),
-      decoration: InputDecoration(
-        labelText: currentLabel,
-        labelStyle: TextStyle(
-          color: currentColor,
-          fontWeight: hasError ? FontWeight.w500 : FontWeight.normal,
-        ),
-        
-        prefixIcon: Icon(prefixIcon, color: currentColor.withOpacity(0.8)),
-        
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(
-                  obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: kPrimaryMaroon,
-                ),
-                onPressed: onToggleObscure,
-              )
-            : null,
-        
-        errorText: hasError ? ' ' : null,
-        errorStyle: const TextStyle(fontSize: 0, height: 0),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontFamily: 'Roboto Flex',
+            fontWeight: FontWeight.w700,
+          ),
+          decoration: InputDecoration(
+            hintText: currentLabel, 
+            hintStyle: TextStyle(
+              color: currentColor.withOpacity(0.7),
+              fontWeight: FontWeight.normal,
+            ),
+            
+            prefixIcon: Icon(prefixIcon, color: currentColor.withOpacity(0.8)),
+            
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: kPrimaryMaroon,
+                    ),
+                    onPressed: onToggleObscure,
+                  )
+                : null,
+            
+            // Konfigurasi Error Text agar muncul di bawah (Seperti Gambar 2)
+            errorText: hasError ? errorText : null,
+            errorStyle: TextStyle(
+              color: kDialogError,
+              fontSize: 12, // Ukuran font error
+              fontFamily: 'Roboto Flex',
+            ),
 
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: kPrimaryMaroon.withOpacity(0.4), width: 1.5),
-          borderRadius: BorderRadius.circular(8),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: kPrimaryMaroon.withOpacity(0.4), width: 1.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: kPrimaryMaroon, width: 2.0),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: kDialogError, width: 2.0),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: kDialogError, width: 2.0),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kPrimaryMaroon, width: 2.0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kDialogError, width: 2.0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kDialogError, width: 2.0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
+      ],
     );
   }
 
@@ -389,14 +373,14 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _usernameController,
           hintText: 'Username',
           prefixIcon: Icons.person,
-          errorText: _usernameError,
+          errorText: _usernameError, // Menampilkan error "Cannot be empty" disini
         ),
         const SizedBox(height: 16),
         _buildAuthTextField(
           controller: _passwordController,
           hintText: 'Password',
           prefixIcon: Icons.lock,
-          errorText: _passwordError,
+          errorText: _passwordError, // Menampilkan error "Cannot be empty" disini
           isPassword: true,
           obscureText: _obscurePassword,
           onToggleObscure: () {
@@ -405,7 +389,31 @@ class _LoginScreenState extends State<LoginScreen> {
             });
           },
         ),
+        
         const SizedBox(height: 16),
+        
+        // TAMPILAN ERROR "Invalid username and/or password" (Kotak Merah)
+        if (_generalError != null)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.2), // Latar belakang merah muda
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _generalError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.red, // Teks merah
+                fontStyle: FontStyle.italic,
+                fontSize: 14,
+                fontFamily: 'Roboto Flex',
+              ),
+            ),
+          ),
+
         _buildLoginExtras(),
         const SizedBox(height: 30),
         SizedBox(
@@ -423,52 +431,24 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLoginExtras() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: Checkbox(
-                value: _rememberMe,
-                onChanged: (val) {
-                  setState(() {
-                    _rememberMe = val ?? false;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Remember me',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-                fontFamily: 'Roboto Flex',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
-            );
-          },
-          child: const Text(
-            'Forgot Password?',
-            style: TextStyle(
-              color: kPrimaryMaroon,
-              fontSize: 12,
-              fontFamily: 'Roboto Flex',
-              fontWeight: FontWeight.w500,
-            ),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+          );
+        },
+        child: const Text(
+          'Forgot Password?',
+          style: TextStyle(
+            color: kPrimaryMaroon,
+            fontSize: 12,
+            fontFamily: 'Roboto Flex',
+            fontWeight: FontWeight.w500,
           ),
         ),
-      ],
+      ),
     );
   }
 }
