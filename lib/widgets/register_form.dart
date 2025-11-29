@@ -22,6 +22,7 @@ class _RegisterFormState extends State<RegisterForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Variable Error per field
   String? _usernameError;
   String? _emailError;
   String? _passwordError;
@@ -39,12 +40,14 @@ class _RegisterFormState extends State<RegisterForm> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
+    // Reset error sebelum validasi
     setState(() {
       _usernameError = null;
       _emailError = null;
       _passwordError = null;
     });
 
+    // 1. VALIDASI INPUT KOSONG (Muncul di bawah field masing-masing)
     bool hasError = false;
     if (username.isEmpty) {
       setState(() => _usernameError = 'Username cannot be empty');
@@ -61,9 +64,11 @@ class _RegisterFormState extends State<RegisterForm> {
 
     if (hasError) return;
 
+    // Mulai Loading
     widget.onRegisterLoading(true);
 
     try {
+      // Cek apakah username sudah dipakai di Firestore
       final usernameCheck = await FirebaseFirestore.instance
           .collection('users')
           .where('username', isEqualTo: username)
@@ -74,6 +79,7 @@ class _RegisterFormState extends State<RegisterForm> {
         throw FirebaseAuthException(code: 'username-already-in-use');
       }
 
+      // Buat akun di Firebase Auth
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
@@ -82,6 +88,7 @@ class _RegisterFormState extends State<RegisterForm> {
       if (user != null) {
         await user.sendEmailVerification();
 
+        // Simpan data user ke Firestore
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'username': username,
           'email': email,
@@ -109,6 +116,7 @@ class _RegisterFormState extends State<RegisterForm> {
         }
       }
     } on FirebaseAuthException catch (e) {
+      // Mapping Error Firebase ke Field yang sesuai
       if (e.code == 'weak-password') {
         setState(() => _passwordError = 'Password terlalu lemah (minimal 6 karakter).');
       } else if (e.code == 'email-already-in-use') {
@@ -118,6 +126,7 @@ class _RegisterFormState extends State<RegisterForm> {
       } else if (e.code == 'username-already-in-use') {
         setState(() => _usernameError = 'Username "$username" sudah dipakai.');
       } else {
+        // Error umum lain masuk ke password atau tampil sebagai console log
         setState(() => _passwordError = 'Terjadi kesalahan. Coba lagi.');
         print('Firebase Error: ${e.message}');
       }
@@ -146,6 +155,7 @@ class _RegisterFormState extends State<RegisterForm> {
     );
   }
 
+  // Widget TextField yang dimodifikasi (Sama persis dengan LoginScreen)
   Widget _buildAuthTextField({
     required TextEditingController controller,
     required String hintText,
@@ -157,54 +167,69 @@ class _RegisterFormState extends State<RegisterForm> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     final bool hasError = errorText != null;
-    final String currentLabel = hasError ? errorText : hintText;
+    final String currentLabel = hintText; // Label tetap sebagai hint
     final Color currentColor = hasError ? kDialogError : kPrimaryMaroon;
 
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: const TextStyle(
-        color: Colors.black,
-        fontSize: 16,
-        fontFamily: 'Roboto Flex',
-        fontWeight: FontWeight.w700,
-      ),
-      decoration: InputDecoration(
-        labelText: currentLabel,
-        labelStyle: TextStyle(
-          color: currentColor,
-          fontWeight: hasError ? FontWeight.w500 : FontWeight.normal,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontFamily: 'Roboto Flex',
+            fontWeight: FontWeight.w700,
+          ),
+          decoration: InputDecoration(
+            // Ganti labelText jadi hintText agar border tidak terpotong
+            hintText: currentLabel,
+            hintStyle: TextStyle(
+              color: currentColor.withOpacity(0.7),
+              fontWeight: FontWeight.normal,
+            ),
+            
+            prefixIcon: Icon(prefixIcon, color: currentColor.withOpacity(0.8)),
+            
+            suffixIcon: isPassword
+                ? IconButton(
+                    icon: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: kPrimaryMaroon,
+                    ),
+                    onPressed: onToggleObscure,
+                  )
+                : null,
+            
+            // Konfigurasi Error Text agar muncul di bawah field
+            errorText: hasError ? errorText : null,
+            errorStyle: const TextStyle(
+              color: kDialogError,
+              fontSize: 12,
+              fontFamily: 'Roboto Flex',
+            ),
+            
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: kPrimaryMaroon.withOpacity(0.4), width: 1.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: kPrimaryMaroon, width: 2.0),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: kDialogError, width: 2.0),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: kDialogError, width: 2.0),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
         ),
-        prefixIcon: Icon(prefixIcon, color: currentColor.withOpacity(0.8)),
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(
-                  obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: kPrimaryMaroon,
-                ),
-                onPressed: onToggleObscure,
-              )
-            : null,
-        errorText: hasError ? ' ' : null,
-        errorStyle: const TextStyle(fontSize: 0, height: 0),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: kPrimaryMaroon.withOpacity(0.4), width: 1.5),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kPrimaryMaroon, width: 2.0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kDialogError, width: 2.0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: kDialogError, width: 2.0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
+      ],
     );
   }
 
