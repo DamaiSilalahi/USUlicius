@@ -1,5 +1,3 @@
-// lib/screens/favorite_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -58,14 +56,14 @@ class FavoriteScreen extends StatelessWidget {
               // === PERUBAHAN DI SINI ===
               final String imagePath = buildImagePath(data['image'] ?? '');
               final String price = (data['price'] ?? 0).toString();
-              final int rating = (data['rating'] ?? 0.0).toInt();
+             final double rating = (data['averageRating'] ?? 0.0).toDouble();
 
               return FoodCard(
                 foodId: foodId,
                 imageUrl: imagePath, // <-- Kirim path asset
                 title: data['name'] ?? 'Tanpa Nama',
                 location: data['location'] ?? 'Tanpa Lokasi',
-                rating: rating.toString(),
+                rating: rating.toStringAsFixed(1),
                 onTap: () {
                   Navigator.push(
                     context,

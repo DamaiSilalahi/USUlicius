@@ -185,14 +185,14 @@ class _HomeContentState extends State<HomeContent> {
                   // Ambil field 'image' (bukan 'imageURL')
                   final String imagePath = buildImagePath(data['image'] ?? '');
                   final String price = (data['price'] ?? 0).toString();
-                  final int rating = (data['rating'] ?? 0.0).toInt();
+                  final double rating = (data['averageRating'] ?? 0.0).toDouble();
 
                   return FoodCard(
                     foodId: foodId,
                     imageUrl: imagePath, // <-- Kirim path asset
                     title: data['name'] ?? 'Tanpa Nama',
                     location: data['location'] ?? 'Tanpa Lokasi',
-                    rating: rating.toString(),
+                    rating: rating.toStringAsFixed(1),
                     onTap: () {
                       Navigator.push(
                         context,
