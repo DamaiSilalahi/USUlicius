@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class FoodDetailScreen extends StatefulWidget {
   final String foodId;
@@ -12,7 +14,6 @@ class FoodDetailScreen extends StatefulWidget {
   final String imageUrl;
   final String title;
   final String price;
-  // final int rating; // <-- 1. HAPUS INI
   final String location;
   final String description;
 
@@ -23,7 +24,6 @@ class FoodDetailScreen extends StatefulWidget {
     required this.imageUrl,
     required this.title,
     required this.price,
-    // required this.rating, // <-- 2. HAPUS INI
     required this.location,
     required this.description,
   });
@@ -33,7 +33,6 @@ class FoodDetailScreen extends StatefulWidget {
 }
 
 class _FoodDetailScreenState extends State<FoodDetailScreen> {
-  final String _userID = 'dummy_user_001';
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +51,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        // ... (BottomNav tidak berubah)
         currentIndex: widget.originIndex,
         onTap: (index) {
           if (index == widget.originIndex) {
@@ -100,7 +98,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   }
 
   Widget _buildImageHeader(bool isFavorite, FoodProvider foodProvider) {
-    // ... (Fungsi ini tidak berubah)
     return Stack(
       children: [
         SizedBox(
@@ -113,36 +110,36 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             child: widget.imageUrl.isNotEmpty
                 ? Image.asset(
-              widget.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                print("Error load asset di Detail: ${widget.imageUrl}");
-                return Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                );
-              },
-            )
+                    widget.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print("Error load asset di Detail: ${widget.imageUrl}");
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                      );
+                    },
+                  )
                 : Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-            ),
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                  ),
           ),
         ),
         Container(
           height: 350,
           width: double.infinity,
           decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20.0),
-                bottomRight: Radius.circular(20.0),
-              ),
-              gradient: LinearGradient(
-                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.0, 0.4]
-              )
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20.0),
+              bottomRight: Radius.circular(20.0),
+            ),
+            gradient: LinearGradient(
+              colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.4],
+            ),
           ),
         ),
         Positioned(
@@ -152,7 +149,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 28),
             onPressed: () => Navigator.pop(context),
             style: IconButton.styleFrom(
-                backgroundColor: Colors.black.withOpacity(0.3)
+              backgroundColor: Colors.black.withOpacity(0.3),
             ),
           ),
         ),
@@ -161,9 +158,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           right: 20,
           child: Container(
             decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)]
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
             ),
             child: IconButton(
               icon: Icon(
@@ -181,7 +178,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  // === 3. FUNGSI _buildContent DIPERBARUI ===
   Widget _buildContent() {
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -207,34 +203,24 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 16),
 
-          // === 4. TAMBAHKAN STREAMBUILDER UNTUK RATING ===
-          StreamBuilder<QuerySnapshot>(
-              stream: _getReviews(), // Panggil stream review
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  // Tampilkan 0 bintang saat loading
-                  return _buildRatingStars(0, 0);
-                }
-
-                final reviews = snapshot.data!.docs;
-                if (reviews.isEmpty) {
-                  // Tampilkan 0 bintang jika tidak ada review
-                  return _buildRatingStars(0, 0);
-                }
-
-                // Hitung rata-rata
-                double totalRating = 0;
-                for (var doc in reviews) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  totalRating += (data['rating'] ?? 0.0);
-                }
-                final avgRating = totalRating / reviews.length;
-
-                // Tampilkan bintang
-                return _buildRatingStars(avgRating.round(), reviews.length);
+          StreamBuilder<DocumentSnapshot>(
+            stream: _getFoodStream(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return _buildRatingStars(0, 0);
               }
+
+              final data = snapshot.data!.data() as Map<String, dynamic>;
+              final average = (data['averageRating'] ?? 0).toDouble();
+              final count = (data['ratingsCount'] ?? 0);
+
+              int roundedRating = (average - average.floor() >= 0.6)
+                  ? average.ceil()
+                  : average.floor();
+
+              return _buildRatingStars(roundedRating, count);
+            },
           ),
-          // ===========================================
 
           const SizedBox(height: 16),
 
@@ -287,22 +273,20 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  // === 5. BUAT WIDGET BARU UNTUK BINTANG RATING ===
   Widget _buildRatingStars(int rating, int reviewCount) {
     return Row(
       children: [
         ...List.generate(
-          rating, // Gunakan rating yang dihitung
-              (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
+          rating,
+          (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
         ),
-        // Tampilkan bintang kosong sisanya
         ...List.generate(
           5 - rating,
-              (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
+          (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
         ),
         const SizedBox(width: 8),
         Text(
-          '($reviewCount)', // Tampilkan jumlah review
+          '($reviewCount)',
           style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
         const SizedBox(width: 12),
@@ -324,10 +308,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  // === (Sisa kode: _getReviews, _showReviewSheet, _buildSheetHeader,
-  //      _buildReviewItem, _showAddReviewDialog TIDAK BERUBAH dari
-  //      respons saya sebelumnya) ===
-
   Stream<QuerySnapshot> _getReviews() {
     return FirebaseFirestore.instance
         .collection('reviews')
@@ -335,6 +315,14 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         .orderBy('date', descending: true)
         .snapshots();
   }
+
+  Stream<DocumentSnapshot> _getFoodStream() {
+  return FirebaseFirestore.instance
+      .collection('foods')
+      .doc(widget.foodId)
+      .snapshots();
+}
+
 
   void _showReviewSheet(BuildContext context) {
     showModalBottomSheet(
@@ -352,7 +340,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-
               _buildSheetHeader(sheetContext),
               const SizedBox(height: 16),
 
@@ -386,11 +373,17 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                           tanggal = "${dt.day} ${bulan[dt.month - 1]} ${dt.year}";
                         }
 
+                        /// PEMBULATAN CUSTOM UNTUK SHEET
+                        int roundedSheetRating = (() {
+                          final r = (d['rating'] ?? 0.0).toDouble();
+                          return (r - r.floor() >= 0.6) ? r.ceil() : r.floor();
+                        })();
+
                         return _buildReviewItem(
                           d['userID'] ?? 'User',
                           tanggal,
                           d['comment'] ?? '-',
-                          (d['rating'] ?? 0.0).toInt(),
+                          roundedSheetRating,
                         );
                       },
                     );
@@ -444,7 +437,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.5), width: 1.5),
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.5),
+          width: 1.5,
+        ),
         borderRadius: BorderRadius.circular(16.0),
       ),
       child: Column(
@@ -476,25 +472,15 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(
                   rating,
-                      (i) => const Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                    size: 18,
-                  ),
+                  (i) => const Icon(Icons.star, color: Colors.amber, size: 18),
                 ),
               )
             ],
           ),
           const SizedBox(height: 8),
-          Divider(
-            color: Colors.grey[300],
-            thickness: 1,
-          ),
+          Divider(color: Colors.grey[300], thickness: 1),
           const SizedBox(height: 8),
-          Text(
-            comment,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(comment, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
@@ -512,7 +498,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, stateSetter) {
-
             final Color errorColor = Theme.of(context).colorScheme.error;
             final Color primaryColor = Theme.of(context).primaryColor;
             final Color greyColor = Colors.grey[600]!;
@@ -553,7 +538,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.0),
                             borderSide: BorderSide(
-                              color: _hasReviewError ? errorColor : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ?? Colors.grey),
+                              color: _hasReviewError
+                                  ? errorColor
+                                  : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ??
+                                      Colors.grey),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
@@ -658,7 +646,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                     'comment': reviewText,
                                     'rating': _rating,
                                     'foodID': widget.foodId,
-                                    'userID': _userID,
+                                    'userID': FirebaseAuth.instance.currentUser!.uid,
                                     'date': Timestamp.now(),
                                   });
                                   print('✅ Review berhasil ditambahkan!');

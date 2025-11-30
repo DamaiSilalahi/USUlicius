@@ -22,6 +22,12 @@ class FoodCard extends StatelessWidget {
     this.onTap,
   }) : super(key: key);
 
+  // === Tambahan kecil (tidak mengubah yang lain) ===
+  String cleanRating(String r) {
+    if (r.endsWith('.0')) return r.replaceAll('.0', '');
+    return r;
+  }
+
   @override
   Widget build(BuildContext context) {
     final foodProvider = Provider.of<FoodProvider>(context);
@@ -60,21 +66,24 @@ class FoodCard extends StatelessWidget {
                   height: 70,
                   child: imageUrl.isNotEmpty
                       ? Image.asset(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Fallback jika asset tidak ditemukan
-                      print("Error load asset di FoodCard: $imageUrl");
-                      return Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.fastfood, color: Colors.grey, size: 35),
-                      );
-                    },
-                  )
-                      : Container( // Fallback jika path string kosong
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.fastfood, color: Colors.grey, size: 35),
-                  ),
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback jika asset tidak ditemukan
+                            print("Error load asset di FoodCard: $imageUrl");
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.fastfood,
+                                  color: Colors.grey, size: 35),
+                            );
+                          },
+                        )
+                      : Container(
+                          // Fallback jika path string kosong
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.fastfood,
+                              color: Colors.grey, size: 35),
+                        ),
                 ),
               ),
               // ================================================
@@ -95,12 +104,14 @@ class FoodCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                        Icon(Icons.location_on,
+                            size: 14, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             location,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                             softWrap: false,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -110,11 +121,13 @@ class FoodCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.star, size: 14, color: Colors.orange),
+                        const Icon(Icons.star,
+                            size: 14, color: Colors.orange),
                         const SizedBox(width: 4),
                         Text(
-                          rating,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          cleanRating(rating), // 🔥 hanya ini yg diubah
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[600]),
                         ),
                       ],
                     ),

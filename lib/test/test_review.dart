@@ -16,9 +16,10 @@ class _TestReviewState extends State<TestReview> {
   final String _userID = 'dummy_user_001';
 
   Future<void> tambahReview() async {
-    if (_commentController.text.trim().isEmpty) return;
+    if (_commentController.text.trim().isEmpty || _rating == 0) return;
 
     try {
+      // 🔹 Simpan review ke koleksi 'reviews'
       await FirebaseFirestore.instance.collection('reviews').add({
         'comment': _commentController.text.trim(),
         'rating': _rating,
@@ -27,9 +28,33 @@ class _TestReviewState extends State<TestReview> {
         'date': Timestamp.now(),
       });
 
+      // 🔥 Update data summary rating di tabel 'foods'
+      final foodRef = FirebaseFirestore.instance.collection('foods').doc(_foodID);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(foodRef);
+
+        final currentCount = snapshot.data()?['ratingsCount'] is num
+            ? snapshot.data()!['ratingsCount']
+            : 0;
+        final currentSum = snapshot.data()?['ratingsSum'] is num
+            ? snapshot.data()!['ratingsSum']
+            : 0;
+
+        final newCount = currentCount + 1;
+        final newSum = currentSum + _rating.toInt();
+        final newAverage = newSum / newCount;
+
+        transaction.update(foodRef, {
+          'ratingsCount': newCount,
+          'ratingsSum': newSum,
+          'averageRating': newAverage,
+        });
+      });
+
       _commentController.clear();
       setState(() => _rating = 0);
-      print('✅ Review berhasil ditambahkan!');
+      print('✅ Review + Rating berhasil ditambahkan!');
     } catch (e) {
       print('❌ Gagal menambahkan review: $e');
     }
@@ -50,6 +75,8 @@ class _TestReviewState extends State<TestReview> {
       body: Column(
         children: [
           const SizedBox(height: 16),
+
+          // ⭐ Pilih rating
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (index) {
@@ -64,6 +91,7 @@ class _TestReviewState extends State<TestReview> {
               );
             }),
           ),
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
@@ -74,12 +102,17 @@ class _TestReviewState extends State<TestReview> {
               ),
             ),
           ),
+
           const SizedBox(height: 10),
+
           ElevatedButton(
             onPressed: tambahReview,
             child: const Text('Kirim Review'),
           ),
+
           const Divider(),
+
+          // 🔹 Daftar review
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: getReviews(),
@@ -97,15 +130,12 @@ class _TestReviewState extends State<TestReview> {
                 return ListView.builder(
                   itemCount: data.length,
                   itemBuilder: (context, index) {
-                    final doc = data[index];
-                    final d = doc.data() as Map<String, dynamic>;
+                    final d = data[index].data() as Map<String, dynamic>;
 
                     String tanggal = "";
                     if (d['date'] != null) {
-                      final Timestamp t = d['date'];
-                      final DateTime dt = t.toDate();
-
-                      final bulan = [
+                      final t = (d['date'] as Timestamp).toDate();
+                      const bulan = [
                         "Januari",
                         "Februari",
                         "Maret",
@@ -117,13 +147,12 @@ class _TestReviewState extends State<TestReview> {
                         "September",
                         "Oktober",
                         "November",
-                        "Desember"
+                        "Desember",
                       ];
-
                       tanggal =
-                          "${dt.day} ${bulan[dt.month - 1]} ${dt.year} – "
-                          "${dt.hour.toString().padLeft(2, '0')}:"
-                          "${dt.minute.toString().padLeft(2, '0')}";
+                          "${t.day} ${bulan[t.month - 1]} ${t.year} – "
+                          "${t.hour.toString().padLeft(2, '0')}:"
+                          "${t.minute.toString().padLeft(2, '0')}";
                     }
 
                     return ListTile(
@@ -137,7 +166,9 @@ class _TestReviewState extends State<TestReview> {
                           Text(
                             tanggal,
                             style: const TextStyle(
-                                fontSize: 12, color: Colors.grey),
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
