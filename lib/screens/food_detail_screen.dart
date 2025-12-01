@@ -62,7 +62,17 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               Navigator.pop(context);
             }
             Future.delayed(const Duration(milliseconds: 50), () {
-              homeScreenKey.currentState?.navigateToPage(index);
+              // Pastikan homeScreenKey/favoriteScreenKey diimport/tersedia
+              // Karena navigasi ini memanggil fungsi di HomeScreen
+              if (index == 0) {
+                homeScreenKey.currentState?.navigateToPage(0);
+                homeContentKey.currentState?.scrollToTop();
+              } else if (index == 1) {
+                homeScreenKey.currentState?.navigateToPage(1);
+                favoriteScreenKey.currentState?.scrollToTop();
+              } else {
+                homeScreenKey.currentState?.navigateToPage(index);
+              }
             });
           }
         },
@@ -110,20 +120,19 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             child: widget.imageUrl.isNotEmpty
                 ? Image.asset(
-                    widget.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      print("Error load asset di Detail: ${widget.imageUrl}");
-                      return Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                      );
-                    },
-                  )
+              widget.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                );
+              },
+            )
                 : Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                  ),
+              color: Colors.grey[200],
+              child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+            ),
           ),
         ),
         Container(
@@ -224,19 +233,27 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
           const SizedBox(height: 16),
 
+          // === FIX LOKASI KEPANJANGAN (WRAPPING) ===
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start, // Align icon ke atas
             children: [
-              Icon(Icons.location_on, color: Colors.grey[600], size: 18),
+              // Tambahkan Padding sedikit ke icon agar pas dengan baris pertama teks
+              Padding(
+                padding: const EdgeInsets.only(top: 2.0),
+                child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   widget.location,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  overflow: TextOverflow.ellipsis,
+                  // Overflow ellipsis dihapus agar teks turun ke bawah
                 ),
               ),
             ],
           ),
+          // ==========================================
+
           const SizedBox(height: 24),
 
           const Text(
@@ -278,11 +295,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       children: [
         ...List.generate(
           rating,
-          (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
+              (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
         ),
         ...List.generate(
           5 - rating,
-          (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
+              (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
         ),
         const SizedBox(width: 8),
         Text(
@@ -317,12 +334,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   }
 
   Stream<DocumentSnapshot> _getFoodStream() {
-  return FirebaseFirestore.instance
-      .collection('foods')
-      .doc(widget.foodId)
-      .snapshots();
-}
-
+    return FirebaseFirestore.instance
+        .collection('foods')
+        .doc(widget.foodId)
+        .snapshots();
+  }
 
   void _showReviewSheet(BuildContext context) {
     showModalBottomSheet(
@@ -373,7 +389,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                           tanggal = "${dt.day} ${bulan[dt.month - 1]} ${dt.year}";
                         }
 
-                        /// PEMBULATAN CUSTOM UNTUK SHEET
                         int roundedSheetRating = (() {
                           final r = (d['rating'] ?? 0.0).toDouble();
                           return (r - r.floor() >= 0.6) ? r.ceil() : r.floor();
@@ -399,21 +414,25 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
   Widget _buildSheetHeader(BuildContext sheetContext) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        IconButton(
-          icon: const Icon(Icons.close, size: 28),
-          onPressed: () {
-            Navigator.pop(sheetContext);
-          },
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close, size: 28),
+              onPressed: () {
+                Navigator.pop(sheetContext);
+              },
+            ),
+            const Text(
+              'Review',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
-        const Text(
-          'Review',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const Spacer(),
         TextButton(
           onPressed: () {
             Navigator.pop(sheetContext);
@@ -447,6 +466,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
                 radius: 20,
@@ -454,25 +474,32 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 child: Icon(Icons.person, color: Theme.of(context).primaryColor),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  Text(
-                    date,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ],
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      date,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
+
+              const SizedBox(width: 8),
+
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(
                   rating,
-                  (i) => const Icon(Icons.star, color: Colors.amber, size: 18),
+                      (i) => const Icon(Icons.star, color: Colors.amber, size: 18),
                 ),
               )
             ],
@@ -541,7 +568,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               color: _hasReviewError
                                   ? errorColor
                                   : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ??
-                                      Colors.grey),
+                                  Colors.grey),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(

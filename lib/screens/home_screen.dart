@@ -2,17 +2,21 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/category_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/category_item.dart';
-import 'package:usulicius_kelompok_lucky/widgets/custom_search_bar.dart';
 import 'package:usulicius_kelompok_lucky/widgets/food_card.dart';
 import 'package:usulicius_kelompok_lucky/screens/food_detail_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/favorite_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/settings_screen.dart';
 
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
+
+// Key Global untuk Konten Home (Food)
+final GlobalKey<HomeContentState> homeContentKey = GlobalKey<HomeContentState>();
+
+// === TAMBAHAN BARU: Key Global untuk Favorite Screen ===
+final GlobalKey<FavoriteScreenState> favoriteScreenKey = GlobalKey<FavoriteScreenState>();
+
 
 class HomeScreen extends StatefulWidget {
   HomeScreen() : super(key: homeScreenKey);
@@ -23,12 +27,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _pages;
 
-  final List<Widget> _pages = [
-    HomeContent(),
-    const FavoriteScreen(),
-    const SettingsScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      HomeContent(key: homeContentKey),
+      // Pasang Key pada FavoriteScreen
+      FavoriteScreen(key: favoriteScreenKey),
+      const SettingsScreen(),
+    ];
+  }
 
   void navigateToPage(int index) {
     setState(() {
@@ -41,8 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final Color primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        // ... (AppBar tidak berubah)
         backgroundColor: primaryColor,
         elevation: 0,
         automaticallyImplyLeading: false,
@@ -66,10 +76,22 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _pages[_currentIndex],
 
       bottomNavigationBar: BottomNavigationBar(
-        // ... (BottomNav tidak berubah)
         currentIndex: _currentIndex,
         onTap: (index) {
-          navigateToPage(index);
+          // === LOGIKA SCROLL TO TOP ===
+
+          // 1. Jika klik Food (index 0) saat di Food
+          if (index == 0 && _currentIndex == 0) {
+            homeContentKey.currentState?.scrollToTop();
+          }
+          // 2. Jika klik Favorite (index 1) saat di Favorite
+          else if (index == 1 && _currentIndex == 1) {
+            favoriteScreenKey.currentState?.scrollToTop();
+          }
+          // 3. Pindah halaman biasa
+          else {
+            navigateToPage(index);
+          }
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
@@ -103,21 +125,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// === HomeContent DI REFAKTOR ===
+// === HomeContent (Tidak ada perubahan logika dari yang terakhir disimpan) ===
 class HomeContent extends StatefulWidget {
   HomeContent({super.key});
 
   @override
-  State<HomeContent> createState() => _HomeContentState();
+  State<HomeContent> createState() => HomeContentState();
 }
 
-class _HomeContentState extends State<HomeContent> {
+class HomeContentState extends State<HomeContent> {
   String searchQuery = "";
+  final ScrollController _scrollController = ScrollController();
 
-  // Fungsi helper dari test_makanan_page.dart
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   String buildImagePath(String rawImage) {
     if (rawImage.isEmpty) return "";
-    // Jika path sudah benar, gunakan. Jika tidak, bangun path-nya.
     return rawImage.startsWith("assets/")
         ? rawImage
         : "assets/images/${rawImage.split('/').last}";
@@ -125,98 +162,100 @@ class _HomeContentState extends State<HomeContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: TextField(
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: 'Cari makanan...',
-              filled: true,
-              fillColor: Colors.white,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide(color: Theme.of(context).primaryColor),
-              ),
-            ),
-            onChanged: (v) => setState(() => searchQuery = v.toLowerCase()),
-          ),
-        ),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('foods').snapshots(),
+      builder: (context, snapshot) {
+        List<DocumentSnapshot> docs = [];
+        if (snapshot.hasData) {
+          docs = snapshot.data!.docs;
+        }
 
-        _buildCategories(context),
+        final filtered = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final name = (data['name'] ?? '').toString().toLowerCase();
+          return name.contains(searchQuery);
+        }).toList();
 
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('foods').snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("Tidak ada makanan"));
-              }
+        return ListView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.zero,
+          itemCount: filtered.length + 2,
+          itemBuilder: (ctx, index) {
 
-              final docs = snapshot.data!.docs;
-
-              final filtered = docs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final name = (data['name'] ?? '').toString().toLowerCase();
-                return name.contains(searchQuery);
-              }).toList();
-
-              if (filtered.isEmpty) {
-                return const Center(child: Text("Makanan tidak ditemukan"));
-              }
-
-              return ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: filtered.length,
-                itemBuilder: (ctx, index) {
-                  final doc = filtered[index];
-                  final data = doc.data() as Map<String, dynamic>;
-                  final foodId = doc.id;
-
-                  // === PERUBAHAN DI SINI ===
-                  // Ambil field 'image' (bukan 'imageURL')
-                  final String imagePath = buildImagePath(data['image'] ?? '');
-                  final String price = (data['price'] ?? 0).toString();
-                  final double rating = (data['averageRating'] ?? 0.0).toDouble();
-
-                  return FoodCard(
-                    foodId: foodId,
-                    imageUrl: imagePath, // <-- Kirim path asset
-                    title: data['name'] ?? 'Tanpa Nama',
-                    location: data['location'] ?? 'Tanpa Lokasi',
-                    rating: rating.toStringAsFixed(1),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => FoodDetailScreen(
-                            originIndex: 0,
-                            foodId: foodId,
-                            imageUrl: imagePath,
-                            title: data['name'] ?? 'Tanpa Nama',
-                            price: "Rp $price",
-                            // rating: rating, // <-- HAPUS BARIS INI
-                            location: data['location'] ?? 'Tanpa Lokasi',
-                            description: data['description'] ?? 'Tanpa Deskripsi',
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Cari makanan...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                    ),
+                  ),
+                  onChanged: (v) => setState(() => searchQuery = v.toLowerCase()),
+                ),
               );
-            },
-          ),
-        ),
-      ],
+            }
+
+            if (index == 1) {
+              return _buildCategories(context);
+            }
+
+            final foodIndex = index - 2;
+
+            if (filtered.isEmpty) {
+              if (foodIndex == 0) {
+                return const Padding(
+                  padding: EdgeInsets.only(top: 20),
+                  child: Center(child: Text("Makanan tidak ditemukan")),
+                );
+              } else {
+                return const SizedBox();
+              }
+            }
+
+            final doc = filtered[foodIndex];
+            final data = doc.data() as Map<String, dynamic>;
+            final foodId = doc.id;
+
+            final String imagePath = buildImagePath(data['image'] ?? '');
+            final String price = (data['price'] ?? 0).toString();
+            final double rating = (data['averageRating'] ?? 0.0).toDouble();
+
+            return FoodCard(
+              foodId: foodId,
+              imageUrl: imagePath,
+              title: data['name'] ?? 'Tanpa Nama',
+              location: data['location'] ?? 'Tanpa Lokasi',
+              rating: rating.toStringAsFixed(1),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FoodDetailScreen(
+                      originIndex: 0,
+                      foodId: foodId,
+                      imageUrl: imagePath,
+                      title: data['name'] ?? 'Tanpa Nama',
+                      price: "Rp $price",
+                      location: data['location'] ?? 'Tanpa Lokasi',
+                      description: data['description'] ?? 'Tanpa Deskripsi',
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -238,8 +277,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => CategoryScreen(
                       title: 'Makanan Pedas',
-                      subtitle:
-                      'Bikin nagih, menggugah selera, dan penuh sensasi.',
+                      subtitle: 'Bikin nagih, menggugah selera, dan penuh sensasi.',
                       category: "Pedas",
                     ),
                   ),
@@ -259,8 +297,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => CategoryScreen(
                       title: 'Makanan Manis',
-                      subtitle:
-                      'Rasa legit, bikin bahagia, dan selalu jadi favorit',
+                      subtitle: 'Rasa legit, bikin bahagia, dan selalu jadi favorit',
                       category: "Manis",
                     ),
                   ),
@@ -280,8 +317,7 @@ class _HomeContentState extends State<HomeContent> {
                   MaterialPageRoute(
                     builder: (context) => CategoryScreen(
                       title: 'Makanan Pilihan',
-                      subtitle:
-                      'Rasanya pas, mengenyangkan, dan cocok untuk semua selera',
+                      subtitle: 'Rasanya pas, mengenyangkan, dan cocok untuk semua selera',
                       category: "Pilihan Mahasiswa",
                     ),
                   ),
