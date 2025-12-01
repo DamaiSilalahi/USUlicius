@@ -17,7 +17,6 @@ class CategoryScreen extends StatelessWidget {
     required this.category,
   }) : super(key: key);
 
-  // Fungsi helper dari test_makanan_page.dart
   String buildImagePath(String rawImage) {
     if (rawImage.isEmpty) return "";
     return rawImage.startsWith("assets/")
@@ -34,7 +33,6 @@ class CategoryScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        // ... (AppBar tidak berubah)
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         toolbarHeight: 86,
@@ -55,86 +53,102 @@ class CategoryScreen extends StatelessWidget {
           )
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 4.0),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
-            child: Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          ),
+      // Hapus Column statis di sini, langsung ke StreamBuilder
+      body: StreamBuilder<QuerySnapshot>(
+        stream: foodStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: foodStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text("Tidak ada makanan di kategori ini"));
-                }
+          final docs = snapshot.hasData ? snapshot.data!.docs : [];
 
-                final docs = snapshot.data!.docs;
+          // Kita gunakan ListView tunggal
+          // itemCount = jumlah data makanan + 1 (untuk Header Judul)
+          return ListView.builder(
+            padding: EdgeInsets.zero,
+            itemCount: docs.length + 1,
+            itemBuilder: (ctx, index) {
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  itemCount: docs.length,
-                  itemBuilder: (ctx, index) {
-                    final doc = docs[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    final foodId = doc.id;
-
-                    // === PERUBAHAN DI SINI ===
-                    final String imagePath = buildImagePath(data['image'] ?? '');
-                    final String price = (data['price'] ?? 0).toString();
-                    final double rating = (data['averageRating'] ?? 0.0).toDouble();
-
-                    return FoodCard(
-                      foodId: foodId,
-                      imageUrl: imagePath, // <-- Kirim path asset
-                      title: data['name'] ?? 'Tanpa Nama',
-                      location: data['location'] ?? 'Tanpa Lokasi',
-                     rating: rating.toStringAsFixed(1),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => FoodDetailScreen(
-                              originIndex: 0,
-                              foodId: foodId,
-                              imageUrl: imagePath,
-                              title: data['name'] ?? 'Tanpa Nama',
-                              price: "Rp $price",
-                              // rating: rating, // <-- HAPUS BARIS INI
-                              location: data['location'] ?? 'Tanpa Lokasi',
-                              description: data['description'] ?? 'Tanpa Deskripsi',
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+              // === ITEM 0: HEADER (JUDUL & SUBTITLE) ===
+              // Ini sekarang bagian dari List, jadi ikut terscroll
+              if (index == 0) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 4.0),
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
+                      child: Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    // Jika data kosong, tampilkan pesan di bawah header
+                    if (docs.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 50.0),
+                        child: Center(
+                          child: Text("Tidak ada makanan di kategori ini"),
+                        ),
+                      ),
+                  ],
                 );
-              },
-            ),
-          ),
-        ],
+              }
+
+              // === ITEM SELANJUTNYA: MAKANAN ===
+              // Karena index 0 dipakai header, kita kurangi 1 untuk akses data
+              final foodIndex = index - 1;
+
+              // Cek safety jika docs kosong (walaupun sudah dihandle di atas)
+              if (docs.isEmpty) return const SizedBox();
+
+              final doc = docs[foodIndex];
+              final data = doc.data() as Map<String, dynamic>;
+              final foodId = doc.id;
+
+              final String imagePath = buildImagePath(data['image'] ?? '');
+              final String price = (data['price'] ?? 0).toString();
+              final double rating = (data['averageRating'] ?? 0.0).toDouble();
+
+              return FoodCard(
+                foodId: foodId,
+                imageUrl: imagePath,
+                title: data['name'] ?? 'Tanpa Nama',
+                location: data['location'] ?? 'Tanpa Lokasi',
+                rating: rating.toStringAsFixed(1),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FoodDetailScreen(
+                        originIndex: 0,
+                        foodId: foodId,
+                        imageUrl: imagePath,
+                        title: data['name'] ?? 'Tanpa Nama',
+                        price: "Rp $price",
+                        location: data['location'] ?? 'Tanpa Lokasi',
+                        description: data['description'] ?? 'Tanpa Deskripsi',
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }
