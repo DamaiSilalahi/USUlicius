@@ -1,3 +1,4 @@
+// lib/screens/favorite_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,10 +6,36 @@ import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/widgets/food_card.dart';
 import 'package:usulicius_kelompok_lucky/screens/food_detail_screen.dart';
 
-class FavoriteScreen extends StatelessWidget {
+// Ubah menjadi StatefulWidget agar bisa menyimpan state ScrollController
+class FavoriteScreen extends StatefulWidget {
   const FavoriteScreen({super.key});
 
-  // Fungsi helper dari test_makanan_page.dart
+  @override
+  State<FavoriteScreen> createState() => FavoriteScreenState();
+}
+
+// Hapus underscore (_) agar class State ini Public dan bisa diakses GlobalKey
+class FavoriteScreenState extends State<FavoriteScreen> {
+  // 1. Buat ScrollController
+  final ScrollController _scrollController = ScrollController();
+
+  // 2. Fungsi Scroll to Top
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Bersihkan memori
+    super.dispose();
+  }
+
   String buildImagePath(String rawImage) {
     if (rawImage.isEmpty) return "";
     return rawImage.startsWith("assets/")
@@ -46,6 +73,8 @@ class FavoriteScreen extends StatelessWidget {
           }
 
           return ListView.builder(
+            // 3. Pasang controller di sini
+            controller: _scrollController,
             padding: const EdgeInsets.only(top: 8.0),
             itemCount: favoriteItems.length,
             itemBuilder: (ctx, index) {
@@ -53,14 +82,13 @@ class FavoriteScreen extends StatelessWidget {
               final data = doc.data() as Map<String, dynamic>;
               final foodId = doc.id;
 
-              // === PERUBAHAN DI SINI ===
               final String imagePath = buildImagePath(data['image'] ?? '');
               final String price = (data['price'] ?? 0).toString();
-             final double rating = (data['averageRating'] ?? 0.0).toDouble();
+              final double rating = (data['averageRating'] ?? 0.0).toDouble();
 
               return FoodCard(
                 foodId: foodId,
-                imageUrl: imagePath, // <-- Kirim path asset
+                imageUrl: imagePath,
                 title: data['name'] ?? 'Tanpa Nama',
                 location: data['location'] ?? 'Tanpa Lokasi',
                 rating: rating.toStringAsFixed(1),
@@ -69,12 +97,11 @@ class FavoriteScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => FoodDetailScreen(
-                        originIndex: 0,
+                        originIndex: 1, // Penting: ini 1 karena dari Favorite
                         foodId: foodId,
                         imageUrl: imagePath,
                         title: data['name'] ?? 'Tanpa Nama',
                         price: "Rp $price",
-                        // rating: rating, // <-- HAPUS BARIS INI
                         location: data['location'] ?? 'Tanpa Lokasi',
                         description: data['description'] ?? 'Tanpa Deskripsi',
                       ),
@@ -89,7 +116,6 @@ class FavoriteScreen extends StatelessWidget {
   }
 }
 
-// (Widget EmptyFavoriteState ada di bawah sini, tidak berubah)
 class EmptyFavoriteState extends StatelessWidget {
   const EmptyFavoriteState({super.key});
 
