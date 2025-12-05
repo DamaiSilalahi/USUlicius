@@ -15,9 +15,9 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
     throw new HttpsError("invalid-argument", "Email wajib diisi.");
   }
 
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
 
-  const expiresAt = Date.now() + (5 * 60 * 1000);
+  const expiresAt = Date.now() + (5 * 60 * 1000); // 5 menit
 
   try {
     await admin.firestore().collection("otp_codes").doc(email).set({
@@ -33,13 +33,14 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
   const msg = {
     to: email,
     from: "asnalaia99@gmail.com",
-    subject: "Kode Verifikasi USULicius Anda",
-    text: `Kode OTP Anda adalah: ${otpCode}.`,
+    subject: "Kode Verifikasi USULicius",
+    text: `Kode OTP Anda: ${otpCode}`,
     html: `
-      <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+      <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <h2>Verifikasi Email USULicius</h2>
-        <h1 style="color: #800020; letter-spacing: 5px; font-size: 3em;">${otpCode}</h1>
-        <p>Kode ini berlaku selama 5 menit.</p>
+        <p>Masukkan kode 4 digit ini di aplikasi:</p>
+        <h1 style="color: #800020; letter-spacing: 8px; font-size: 3em; margin: 20px 0;">${otpCode}</h1>
+        <p>Kode berlaku 5 menit.</p>
       </div>
     `,
   };
@@ -49,9 +50,6 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
     return { success: true, message: "Email OTP berhasil dikirim." };
   } catch (error) {
     console.error("Error SendGrid:", error);
-    if (error.response) {
-      console.error(error.response.body);
-    }
     throw new HttpsError("internal", "Gagal mengirim email.");
   }
 });
@@ -68,18 +66,17 @@ exports.verifyOtp = onCall(async (request) => {
   const doc = await docRef.get();
 
   if (!doc.exists) {
-    return { success: false, message: "Kode OTP tidak ditemukan." };
+    return { success: false, message: "Kode tidak ditemukan." };
   }
 
   const otpData = doc.data();
-  const now = Date.now();
 
-  if (now > otpData.expiresAt) {
-    return { success: false, message: "Kode OTP sudah kadaluarsa." };
+  if (Date.now() > otpData.expiresAt) {
+    return { success: false, message: "Kode sudah kadaluarsa." };
   }
 
   if (String(otpData.code) !== String(userCode)) {
-    return { success: false, message: "Kode OTP salah." };
+    return { success: false, message: "Kode salah." };
   }
 
   await docRef.delete();
