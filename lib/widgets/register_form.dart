@@ -9,7 +9,6 @@ const Color kPrimaryMaroon = Color(0xFF800020);
 const Color kDialogError = Color(0xFFD32F2F);
 
 class RegisterForm extends StatefulWidget {
-  // Callback opsional jika parent perlu tahu status loading
   final Function(bool)? onRegisterLoading;
 
   const RegisterForm({Key? key, this.onRegisterLoading}) : super(key: key);
@@ -20,13 +19,12 @@ class RegisterForm extends StatefulWidget {
 
 class _RegisterFormState extends State<RegisterForm> {
   bool _obscurePassword = true;
-  bool _isLoading = false; // State loading internal untuk tombol
+  bool _isLoading = false;
 
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Variable Error per field
   String? _usernameError;
   String? _emailError;
   String? _passwordError;
@@ -40,9 +38,7 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 
   void _setLoading(bool value) {
-    setState(() {
-      _isLoading = value;
-    });
+    setState(() => _isLoading = value);
     if (widget.onRegisterLoading != null) {
       widget.onRegisterLoading!(value);
     }
@@ -53,35 +49,24 @@ class _RegisterFormState extends State<RegisterForm> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // Reset error sebelum validasi
     setState(() {
       _usernameError = null;
       _emailError = null;
       _passwordError = null;
     });
 
-    // 1. VALIDASI INPUT KOSONG
     bool hasError = false;
-    if (username.isEmpty) {
-      setState(() => _usernameError = 'Username cannot be empty');
-      hasError = true;
-    }
-    if (email.isEmpty) {
-      setState(() => _emailError = 'Email cannot be empty');
-      hasError = true;
-    }
-    if (password.isEmpty) {
-      setState(() => _passwordError = 'Password cannot be empty');
-      hasError = true;
-    }
+    if (username.isEmpty) { setState(() => _usernameError = 'Wajib diisi'); hasError = true; }
+    if (email.isEmpty) { setState(() => _emailError = 'Wajib diisi'); hasError = true; }
+    if (password.isEmpty) { setState(() => _passwordError = 'Wajib diisi'); hasError = true; }
 
     if (hasError) return;
 
-    // Mulai Loading
     _setLoading(true);
 
     try {
-      // 2. CEK USERNAME UNIK DI FIRESTORE
+      // 1. Cek Username Unik
+      print("🔍 Mengecek username unik...");
       final usernameCheck = await FirebaseFirestore.instance
           .collection('users')
           .where('username', isEqualTo: username)
@@ -92,36 +77,41 @@ class _RegisterFormState extends State<RegisterForm> {
         throw FirebaseAuthException(code: 'username-already-in-use');
       }
 
-      // 3. BUAT AKUN DI FIREBASE AUTH
+      // 2. Buat Akun Auth
+      print("👤 Membuat akun di Auth...");
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
       User? user = userCredential.user;
 
       if (user != null) {
-        // 4. SIMPAN PROFIL KE FIRESTORE
+
+        print("🚀 Memanggil Cloud Function 'sendOtpEmail'...");
+
+
+        try {
+          await FirebaseFunctions.instance
+              .httpsCallable('sendOtpEmail')
+              .call({'email': email});
+
+          print("✅ Sukses: Perintah kirim OTP 4 digit sudah dikirim ke server.");
+        } catch (e) {
+          print("❌ Gagal panggil Cloud Function: $e");
+          throw FirebaseAuthException(code: 'otp-failed', message: 'Gagal mengirim kode OTP.');
+        }
+
+        print("💾 Menyimpan profil ke Firestore...");
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'username': username,
           'email': email,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // 5. [PERBAIKAN] KIRIM OTP VIA CLOUD FUNCTION (Bukan Link!)
-        try {
-          await FirebaseFunctions.instance
-              .httpsCallable('sendOtpEmail')
-              .call({'email': email});
-          print("OTP sent via Cloud Function!");
-        } catch (e) {
-          print("Error Cloud Function: $e");
-          throw FirebaseAuthException(code: 'otp-failed', message: 'Gagal mengirim OTP.');
-        }
-
         if (mounted) {
           showStatusDialog(
             context: context,
-            title: 'OTP Terkirim',
-            message: 'Kode 4 digit telah dikirim ke $email. Silakan cek inbox Anda.',
+            title: 'Kode OTP Terkirim',
+            message: 'Kode 4 digit telah dikirim ke $email via SendGrid.\nCek Spam jika tidak ada.',
             icon: Icons.mark_email_read,
             iconColor: kPrimaryMaroon,
           ).then((_) {
@@ -137,34 +127,19 @@ class _RegisterFormState extends State<RegisterForm> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      // Mapping Error Firebase ke Field yang sesuai
-      if (e.code == 'weak-password') {
-        setState(() => _passwordError = 'Password terlalu lemah (minimal 6 karakter).');
-      } else if (e.code == 'email-already-in-use') {
-        setState(() => _emailError = 'Email ini sudah terdaftar.');
-      } else if (e.code == 'invalid-email') {
-        setState(() => _emailError = 'Format email tidak valid.');
-      } else if (e.code == 'username-already-in-use') {
-        setState(() => _usernameError = 'Username "$username" sudah dipakai.');
-      } else if (e.code == 'otp-failed') {
-        // Error umum tampilkan di dialog karena bukan salah input user
+      if (e.code == 'weak-password') setState(() => _passwordError = 'Password terlalu lemah.');
+      else if (e.code == 'email-already-in-use') setState(() => _emailError = 'Email sudah terdaftar.');
+      else if (e.code == 'invalid-email') setState(() => _emailError = 'Format email salah.');
+      else if (e.code == 'username-already-in-use') setState(() => _usernameError = 'Username sudah dipakai.');
+      else if (e.code == 'otp-failed') {
         if (mounted) {
-          showStatusDialog(
-            context: context,
-            title: 'Gagal',
-            message: 'Gagal mengirim kode OTP. Cek koneksi internet.',
-            icon: Icons.error,
-            iconColor: kDialogError,
-          );
+          showStatusDialog(context: context, title: 'Gagal', message: 'Gagal mengirim OTP. Server error.', icon: Icons.error, iconColor: kDialogError);
         }
       } else {
-        setState(() => _passwordError = 'Terjadi kesalahan. Coba lagi.');
-        print('Firebase Error: ${e.message}');
+        setState(() => _passwordError = 'Error: ${e.message}');
       }
     } finally {
-      if (mounted) {
-        _setLoading(false);
-      }
+      if (mounted) _setLoading(false);
     }
   }
 
@@ -180,14 +155,7 @@ class _RegisterFormState extends State<RegisterForm> {
           child: ElevatedButton(
             onPressed: _isLoading ? null : _handleRegister,
             child: _isLoading
-                ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 3,
-              ),
-            )
+                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                 : const Text('Register'),
           ),
         ),
@@ -195,7 +163,6 @@ class _RegisterFormState extends State<RegisterForm> {
     );
   }
 
-  // Widget TextField yang dimodifikasi (Reusability)
   Widget _buildAuthTextField({
     required TextEditingController controller,
     required String hintText,
@@ -207,8 +174,7 @@ class _RegisterFormState extends State<RegisterForm> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     final bool hasError = errorText != null;
-    final Color currentColor = hasError ? kDialogError : kPrimaryMaroon;
-
+    final Color currentColor = hasError ? kDialogError : kPrimaryMaroon; // Fix warna variabel
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -216,55 +182,18 @@ class _RegisterFormState extends State<RegisterForm> {
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontFamily: 'Roboto Flex',
-            fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(color: Colors.black, fontSize: 16, fontFamily: 'Roboto Flex', fontWeight: FontWeight.w700),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(
-              color: currentColor.withOpacity(0.7),
-              fontWeight: FontWeight.normal,
-            ),
-
+            hintStyle: TextStyle(color: currentColor.withOpacity(0.7), fontWeight: FontWeight.normal),
             prefixIcon: Icon(prefixIcon, color: currentColor.withOpacity(0.8)),
-
-            suffixIcon: isPassword
-                ? IconButton(
-              icon: Icon(
-                obscureText ? Icons.visibility_off : Icons.visibility,
-                color: kPrimaryMaroon,
-              ),
-              onPressed: onToggleObscure,
-            )
-                : null,
-
-            // Konfigurasi Error Text
+            suffixIcon: isPassword ? IconButton(icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: kPrimaryMaroon), onPressed: onToggleObscure) : null,
             errorText: hasError ? errorText : null,
-            errorStyle: const TextStyle(
-              color: kDialogError,
-              fontSize: 12,
-              fontFamily: 'Roboto Flex',
-            ),
-
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: kPrimaryMaroon.withOpacity(0.4), width: 1.5),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: kPrimaryMaroon, width: 2.0),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: kDialogError, width: 2.0),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderSide: const BorderSide(color: kDialogError, width: 2.0),
-              borderRadius: BorderRadius.circular(8),
-            ),
+            errorStyle: const TextStyle(color: kDialogError, fontSize: 12),
+            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: kPrimaryMaroon.withOpacity(0.4), width: 1.5), borderRadius: BorderRadius.circular(8)),
+            focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: kPrimaryMaroon, width: 2.0), borderRadius: BorderRadius.circular(8)),
+            errorBorder: OutlineInputBorder(borderSide: const BorderSide(color: kDialogError, width: 2.0), borderRadius: BorderRadius.circular(8)),
+            focusedErrorBorder: OutlineInputBorder(borderSide: const BorderSide(color: kDialogError, width: 2.0), borderRadius: BorderRadius.circular(8)),
           ),
         ),
       ],
@@ -274,34 +203,11 @@ class _RegisterFormState extends State<RegisterForm> {
   Widget _buildFormFields() {
     return Column(
       children: [
-        _buildAuthTextField(
-          controller: _usernameController,
-          hintText: 'Username',
-          prefixIcon: Icons.person,
-          errorText: _usernameError,
-        ),
+        _buildAuthTextField(controller: _usernameController, hintText: 'Username', prefixIcon: Icons.person, errorText: _usernameError),
         const SizedBox(height: 16),
-        _buildAuthTextField(
-          controller: _emailController,
-          hintText: 'Email',
-          prefixIcon: Icons.email,
-          keyboardType: TextInputType.emailAddress,
-          errorText: _emailError,
-        ),
+        _buildAuthTextField(controller: _emailController, hintText: 'Email', prefixIcon: Icons.email, keyboardType: TextInputType.emailAddress, errorText: _emailError),
         const SizedBox(height: 16),
-        _buildAuthTextField(
-          controller: _passwordController,
-          hintText: 'Password',
-          prefixIcon: Icons.lock,
-          errorText: _passwordError,
-          isPassword: true,
-          obscureText: _obscurePassword,
-          onToggleObscure: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-        ),
+        _buildAuthTextField(controller: _passwordController, hintText: 'Password', prefixIcon: Icons.lock, errorText: _passwordError, isPassword: true, obscureText: _obscurePassword, onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword)),
       ],
     );
   }
