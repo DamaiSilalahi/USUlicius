@@ -6,6 +6,7 @@ import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:usulicius_kelompok_lucky/widgets/register_form.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 const Color kDialogSuccess = Color(0xFF388E3C);
@@ -21,12 +22,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // State untuk menentukan apakah menampilkan Login atau Register
   bool _isLogin = true;
-
   bool _obscurePassword = true;
 
-  // Controller HANYA untuk Login (Register punya controller sendiri di register_form.dart)
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -46,7 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Menampilkan pesan sukses jika ada (misal: "Password Reset Berhasil")
     if (widget.initialMessage != null) {
       _successMessage = widget.initialMessage;
       Future.delayed(const Duration(seconds: 5), () {
@@ -59,7 +56,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // LOGIKA LOGIN (2-Langkah: Username -> Email -> Auth)
   void _handleLogin() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
@@ -115,7 +111,10 @@ class _LoginScreenState extends State<LoginScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
-        if (user.emailVerified) {
+        await user.reload();
+        user = FirebaseAuth.instance.currentUser;
+
+        if (user != null && user.emailVerified){
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => HomeScreen()),
@@ -123,11 +122,27 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
-          if (context.mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => VerificationScreen(email: userEmail)),
-            );
+          print('Login Berhasil tapi Belum Verif. Mengirim OTP...');
+
+          try {
+            await FirebaseFunctions.instance
+                .httpsCallable('sendOtpEmail')
+                .call({'email': userEmail});
+
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => VerificationScreen(email: userEmail)),
+              );
+            }
+          } catch (e) {
+            print("Gagal auto-send OTP: $e");
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => VerificationScreen(email: userEmail)),
+              );
+            }
           }
         }
       }
@@ -152,7 +167,6 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: kPrimaryMaroon,
       body: Stack(
         children: [
-          // HEADER LOGO
           Positioned(
             top: 0, left: 0, right: 0,
             height: MediaQuery.of(context).size.height * 0.40,
@@ -169,7 +183,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
-          // CONTAINER PUTIH (FORM)
           Positioned(
             top: MediaQuery.of(context).size.height * 0.38,
             left: 0, right: 0, bottom: 0.0,
@@ -201,7 +214,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // TOGGLE LOGIN / REGISTER
                         AuthToggle(
                           isLogin: _isLogin,
                           onLoginTap: () {
@@ -213,7 +225,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 30),
 
-                        // PESAN SUKSES
                         if (_successMessage != null)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 20.0),
@@ -225,20 +236,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
 
-                        // ANIMASI PERPINDAHAN FORM
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
                           transitionBuilder: (Widget child, Animation<double> animation) {
                             return FadeTransition(opacity: animation, child: child);
                           },
-                          // JIKA LOGIN -> Tampilkan Form Login Lokal
-                          // JIKA REGISTER -> Tampilkan Widget RegisterForm (Imported)
                           child: _isLogin
                               ? _buildLoginForm(key: const ValueKey('login'))
                               : RegisterForm(
                             key: const ValueKey('register'),
                             onRegisterLoading: (isLoading) {
-                              // Opsional: Handle loading state dari register jika perlu
                             },
                           ),
                         ),
@@ -253,8 +260,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
-  // --- WIDGET HELPER UNTUK LOGIN FORM ---
 
   Widget _buildLoginForm({Key? key}) {
     return Column(
