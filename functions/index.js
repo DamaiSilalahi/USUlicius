@@ -16,7 +16,6 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
   }
 
   const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
-
   const expiresAt = Date.now() + (5 * 60 * 1000); // 5 menit
 
   try {
@@ -38,7 +37,6 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
     html: `
       <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
         <h2>Verifikasi Email USULicius</h2>
-        <p>Masukkan kode 4 digit ini di aplikasi:</p>
         <h1 style="color: #800020; letter-spacing: 8px; font-size: 3em; margin: 20px 0;">${otpCode}</h1>
         <p>Kode berlaku 5 menit.</p>
       </div>
@@ -58,25 +56,38 @@ exports.verifyOtp = onCall(async (request) => {
   const email = request.data.email;
   const userCode = request.data.code;
 
-  if (!email || !userCode) {
-    throw new HttpsError("invalid-argument", "Data tidak lengkap.");
+  if (String(otpData.code) !== String(userCode)) {
+    return { success: false, message: "Kode OTP salah." };
   }
 
-  const docRef = admin.firestore().collection("otp_codes").doc(email);
-  const doc = await docRef.get();
+  try {
+    const userRecord = await admin.auth().getUserByEmail(email);
 
-  if (!doc.exists) {
-    return { success: false, message: "Kode tidak ditemukan." };
+    await admin.auth().updateUser(userRecord.uid, {
+      emailVerified: true
+    });
+
+    console.log(`User ${email} statusnya diubah menjadi VERIFIED.`);
+  } catch (error) {
+    console.error("Gagal update status auth:", error);
   }
 
-  const otpData = doc.data();
-
-  if (Date.now() > otpData.expiresAt) {
-    return { success: false, message: "Kode sudah kadaluarsa." };
-  }
+  await docRef.delete();
+  return { success: true, message: "Verifikasi berhasil!" };
+});
 
   if (String(otpData.code) !== String(userCode)) {
     return { success: false, message: "Kode salah." };
+  }
+
+  try {
+    const userRecord = await admin.auth().getUserByEmail(email);
+    await admin.auth().updateUser(userRecord.uid, {
+      emailVerified: true
+    });
+    console.log(`User ${email} berhasil diverifikasi secara permanen.`);
+  } catch (error) {
+    console.error("Gagal update user auth:", error);
   }
 
   await docRef.delete();
