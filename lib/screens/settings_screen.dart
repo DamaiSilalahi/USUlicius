@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'account_screen.dart';
-import 'login_screen.dart';
-import 'package:usulicius_kelompok_lucky/widgets/photo_profile.dart';
-import 'package:usulicius_kelompok_lucky/screens/about_us_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:usulicius_kelompok_lucky/screens/account_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/about_us_screen.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,8 +15,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
-  String _userName = 'Loading...';
-  String _userEmail = 'Loading...';
+  String _userName = '';
+  String _userEmail = '';
+  String? _photoUrl;
   bool _isLoading = true;
 
   @override
@@ -27,52 +28,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadUserData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-
     if (user == null) {
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-          (Route<dynamic> route) => false,
-        );
-      }
+      _navigateToLogin();
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      await user!.reload(); // Paksa refresh data Auth
+      final currentUser = FirebaseAuth.instance.currentUser;
+
+      final DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
           .collection('users')
-          .where('email', isEqualTo: user!.email)
-          .limit(1)
+          .doc(user!.uid)
           .get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final userData = querySnapshot.docs.first.data();
-        if (mounted) {
-          setState(() {
-            _userName = userData['username'] ?? 'No Username';
-            _userEmail = user!.email!;
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _userName = 'Error';
-            _userEmail = user!.email!;
-            _isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
       if (mounted) {
         setState(() {
-          _userName = 'Error';
-          _userEmail = user!.email!;
+          _photoUrl = currentUser?.photoURL;
+
+          if (docSnapshot.exists && docSnapshot.data() != null) {
+            final userData = docSnapshot.data() as Map<String, dynamic>;
+            _userName = userData['username'] ?? 'User';
+            if (_photoUrl == null) _photoUrl = userData['photoURL'];
+          } else {
+            _userName = 'User';
+          }
+
+          _userEmail = currentUser?.email ?? '';
           _isLoading = false;
         });
       }
+    } catch (e) {
+      print("Error loading profile: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _navigateToLogin() {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false,
+      );
+    }
+  }
+
+  Widget _buildProfileAvatar() {
+    return CircleAvatar(
+      radius: 55,
+      backgroundColor: Colors.grey.shade200,
+      backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
+          ? NetworkImage(_photoUrl!)
+          : null,
+      child: _photoUrl == null || _photoUrl!.isEmpty
+          ? const Icon(Icons.person, size: 60, color: Colors.grey)
+          : null,
+    );
   }
 
   @override
@@ -92,23 +105,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const ProfileAvatar(
-                radius: 55,
-              ),
+              _buildProfileAvatar(),
+
+              const SizedBox(height: 15),
+
               _isLoading
                   ? const CircularProgressIndicator(color: Color(0xFF8B0000))
-                  : Text(
-                      _userName,
-                      style:
-                          const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-              _isLoading
-                  ? const SizedBox(height: 5)
-                  : Text(
-                      _userEmail,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
+                  : Column(
+                children: [
+                  Text(
+                    _userName,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    _userEmail,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 30),
+
               _buildSettingOption(
                 context,
                 icon: Icons.person_outline,
@@ -125,9 +143,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                   );
+
+                  print("Kembali dari AccountScreen, merefresh data...");
                   _loadUserData();
                 },
               ),
+
               _buildSettingOption(
                 context,
                 icon: Icons.group_outlined,
@@ -163,10 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Logged out successfully!')),
                       );
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        (Route<dynamic> route) => false,
-                      );
+                      _navigateToLogin();
                     }
                   },
                   icon: const Icon(Icons.logout, color: Colors.white),
@@ -190,11 +208,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildSettingOption(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+      BuildContext context, {
+        required IconData icon,
+        required String title,
+        required VoidCallback onTap,
+      }) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -209,8 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: const TextStyle(fontSize: 16),
               ),
             ),
-            const Icon(Icons.arrow_forward_ios,
-                size: 18, color: Colors.grey),
+            const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
           ],
         ),
       ),
