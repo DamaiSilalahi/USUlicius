@@ -1,8 +1,6 @@
-// lib/screens/home_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:usulicius_kelompok_lucky/screens/add_food_screen.dart'; // <-- Pastikan di-import
+import 'package:usulicius_kelompok_lucky/screens/add_food_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/category_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/category_item.dart';
 import 'package:usulicius_kelompok_lucky/widgets/food_card.dart';
@@ -11,11 +9,7 @@ import 'package:usulicius_kelompok_lucky/screens/favorite_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/settings_screen.dart';
 
 final GlobalKey<_HomeScreenState> homeScreenKey = GlobalKey<_HomeScreenState>();
-
-// Key Global untuk Konten Home (Food)
 final GlobalKey<HomeContentState> homeContentKey = GlobalKey<HomeContentState>();
-
-// Key Global untuk Favorite Screen
 final GlobalKey<FavoriteScreenState> favoriteScreenKey = GlobalKey<FavoriteScreenState>();
 
 class HomeScreen extends StatefulWidget {
@@ -33,16 +27,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _pages = [
-      // Index 0: Food
       HomeContent(key: homeContentKey),
-
-      // Index 1: Add (Halaman Baru)
       const AddFoodScreen(),
-
-      // Index 2: Favorite (Geser urutan)
       FavoriteScreen(key: favoriteScreenKey),
-
-      // Index 3: Settings
       const SettingsScreen(),
     ];
   }
@@ -83,30 +70,23 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _pages[_currentIndex],
 
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // <-- PENTING: Agar 4 icon terlihat rapi & label muncul
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (index) {
-          // === LOGIKA SCROLL TO TOP ===
-
-          // 1. Jika klik Food (index 0) saat di Food
           if (index == 0 && _currentIndex == 0) {
             homeContentKey.currentState?.scrollToTop();
           }
-          // 2. Jika klik Favorite (index 2) saat di Favorite
-          // Perhatikan: Favorite sekarang ada di index 2
           else if (index == 2 && _currentIndex == 2) {
             favoriteScreenKey.currentState?.scrollToTop();
           }
-          // 3. Pindah halaman biasa
           else {
             navigateToPage(index);
           }
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true, // Opsional: Tampilkan label item yg tidak aktif
+        showUnselectedLabels: true,
         items: [
-          // 1. Food
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/images/food.png',
@@ -116,22 +96,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             label: 'Food',
           ),
-
-          // 2. Add (MENU BARU)
           const BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
             activeIcon: Icon(Icons.add_circle),
             label: 'Add',
           ),
-
-          // 3. Favorite
           const BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border),
             activeIcon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
-
-          // 4. Settings
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings_outlined),
             activeIcon: Icon(Icons.settings),
@@ -143,7 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// === HomeContent (Tidak berubah, tetap disertakan agar file lengkap) ===
 class HomeContent extends StatefulWidget {
   HomeContent({super.key});
 
@@ -173,6 +146,10 @@ class HomeContentState extends State<HomeContent> {
 
   String buildImagePath(String rawImage) {
     if (rawImage.isEmpty) return "";
+    if (rawImage.startsWith('http')) {
+      return rawImage;
+    }
+
     return rawImage.startsWith("assets/")
         ? rawImage
         : "assets/images/${rawImage.split('/').last}";
@@ -244,9 +221,10 @@ class HomeContentState extends State<HomeContent> {
             final data = doc.data() as Map<String, dynamic>;
             final foodId = doc.id;
 
-            final String imagePath = buildImagePath(data['image'] ?? '');
+            final String imagePath = buildImagePath(data['imageUrl'] ?? data['image'] ?? '');
+
             final String price = (data['price'] ?? 0).toString();
-            final double rating = (data['averageRating'] ?? 0.0).toDouble();
+            final double rating = (data['rating'] ?? data['averageRating'] ?? 0.0).toDouble();
 
             return FoodCard(
               foodId: foodId,

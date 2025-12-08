@@ -1,12 +1,10 @@
-// lib/widgets/food_card.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 
 class FoodCard extends StatelessWidget {
   final String foodId;
-  final String imageUrl; // Ini sekarang adalah PATH ASSET
+  final String imageUrl;
   final String title;
   final String location;
   final String rating;
@@ -22,10 +20,54 @@ class FoodCard extends StatelessWidget {
     this.onTap,
   }) : super(key: key);
 
-  // === Tambahan kecil (tidak mengubah yang lain) ===
   String cleanRating(String r) {
     if (r.endsWith('.0')) return r.replaceAll('.0', '');
     return r;
+  }
+
+  Widget _buildImage() {
+    if (imageUrl.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: const Icon(Icons.fastfood, color: Colors.grey, size: 35),
+      );
+    }
+
+    if (imageUrl.startsWith('http')) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                  loadingProgress.expectedTotalBytes!
+                  : null,
+              strokeWidth: 2,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: const Icon(Icons.broken_image, color: Colors.grey, size: 35),
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey[200],
+            child: const Icon(Icons.fastfood, color: Colors.grey, size: 35),
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -59,35 +101,17 @@ class FoodCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // === PERUBAHAN DI SINI (CircleAvatar -> ClipOval) ===
               ClipOval(
                 child: SizedBox(
-                  width: 70, // (radius 35 * 2)
+                  width: 70,
                   height: 70,
-                  child: imageUrl.isNotEmpty
-                      ? Image.asset(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            // Fallback jika asset tidak ditemukan
-                            print("Error load asset di FoodCard: $imageUrl");
-                            return Container(
-                              color: Colors.grey[200],
-                              child: const Icon(Icons.fastfood,
-                                  color: Colors.grey, size: 35),
-                            );
-                          },
-                        )
-                      : Container(
-                          // Fallback jika path string kosong
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.fastfood,
-                              color: Colors.grey, size: 35),
-                        ),
+                  child: _buildImage(),
                 ),
               ),
-              // ================================================
+
               const SizedBox(width: 16),
+
+              // INFO TEXT
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,7 +149,7 @@ class FoodCard extends StatelessWidget {
                             size: 14, color: Colors.orange),
                         const SizedBox(width: 4),
                         Text(
-                          cleanRating(rating), // 🔥 hanya ini yg diubah
+                          cleanRating(rating),
                           style: TextStyle(
                               fontSize: 12, color: Colors.grey[600]),
                         ),
