@@ -16,7 +16,7 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
   }
 
   const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
-  const expiresAt = Date.now() + (5 * 60 * 1000); // 5 menit
+  const expiresAt = Date.now() + (5 * 60 * 1000);
 
   try {
     await admin.firestore().collection("otp_codes").doc(email).set({
@@ -36,7 +36,7 @@ exports.sendOtpEmail = onCall({ secrets: [sendGridApiKey] }, async (request) => 
     text: `Kode OTP Anda: ${otpCode}`,
     html: `
       <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2>Verifikasi Email USULicius</h2>
+        <h2>Verifikasi USULicius</h2>
         <h1 style="color: #800020; letter-spacing: 8px; font-size: 3em; margin: 20px 0;">${otpCode}</h1>
         <p>Kode berlaku 5 menit.</p>
       </div>
@@ -56,25 +56,22 @@ exports.verifyOtp = onCall(async (request) => {
   const email = request.data.email;
   const userCode = request.data.code;
 
-  if (String(otpData.code) !== String(userCode)) {
-    return { success: false, message: "Kode OTP salah." };
+  if (!email || !userCode) {
+    throw new HttpsError("invalid-argument", "Data tidak lengkap.");
   }
 
-  try {
-    const userRecord = await admin.auth().getUserByEmail(email);
+  const docRef = admin.firestore().collection("otp_codes").doc(email);
+  const doc = await docRef.get();
 
-    await admin.auth().updateUser(userRecord.uid, {
-      emailVerified: true
-    });
-
-    console.log(`User ${email} statusnya diubah menjadi VERIFIED.`);
-  } catch (error) {
-    console.error("Gagal update status auth:", error);
+  if (!doc.exists) {
+    return { success: false, message: "Kode tidak ditemukan." };
   }
 
-  await docRef.delete();
-  return { success: true, message: "Verifikasi berhasil!" };
-});
+  const otpData = doc.data();
+
+  if (Date.now() > otpData.expiresAt) {
+    return { success: false, message: "Kode sudah kadaluarsa." };
+  }
 
   if (String(otpData.code) !== String(userCode)) {
     return { success: false, message: "Kode salah." };
@@ -85,7 +82,6 @@ exports.verifyOtp = onCall(async (request) => {
     await admin.auth().updateUser(userRecord.uid, {
       emailVerified: true
     });
-    console.log(`User ${email} berhasil diverifikasi secara permanen.`);
   } catch (error) {
     console.error("Gagal update user auth:", error);
   }
@@ -93,4 +89,30 @@ exports.verifyOtp = onCall(async (request) => {
   await docRef.delete();
 
   return { success: true, message: "Verifikasi berhasil!" };
+});
+
+exports.resetPasswordViaOtp = onCall(async (request) => {
+  const email = request.data.email;
+  const newPassword = request.data.newPassword;
+
+  if (!email || !newPassword) {
+    throw new HttpsError("invalid-argument", "Email dan password wajib diisi.");
+  }
+
+  if (newPassword.length < 6) {
+    throw new HttpsError("invalid-argument", "Password minimal 6 karakter.");
+  }
+
+  try {
+    const userRecord = await admin.auth().getUserByEmail(email);
+    await admin.auth().updateUser(userRecord.uid, {
+      password: newPassword
+    });
+
+    return { success: true, message: "Password berhasil diubah." };
+
+  } catch (error) {
+    console.error("Gagal reset password:", error);
+    throw new HttpsError("internal", "Gagal mereset password.");
+  }
 });

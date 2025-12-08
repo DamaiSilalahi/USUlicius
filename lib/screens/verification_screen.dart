@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/status_dialog.dart';
 import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/set_new_password_screen.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
@@ -11,10 +12,12 @@ const Color kDialogSuccess = Color(0xFF388E3C);
 
 class VerificationScreen extends StatefulWidget {
   final String email;
+  final bool isPasswordReset;
 
   const VerificationScreen({
     super.key,
     required this.email,
+    this.isPasswordReset = false,
   });
 
   @override
@@ -22,7 +25,6 @@ class VerificationScreen extends StatefulWidget {
 }
 
 class _VerificationScreenState extends State<VerificationScreen> {
-  // [PERUBAHAN] Ubah list menjadi 4 digit
   final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   bool _isLoading = false;
@@ -32,7 +34,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
     super.initState();
     for (int i = 0; i < 4; i++) {
       _controllers[i].addListener(() {
-        // [PERUBAHAN] Pindah fokus otomatis jika index < 3 (karena max index adalah 3)
         if (_controllers[i].text.length == 1 && i < 3) {
           _focusNodes[i + 1].requestFocus();
         }
@@ -50,7 +51,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
   void _handleVerify() async {
     String code = _controllers.map((c) => c.text).join();
 
-    // [PERUBAHAN] Validasi panjang kode harus 4
     if (code.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Masukkan 4 digit kode.")));
       return;
@@ -72,24 +72,30 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
       if (success) {
         if (mounted) {
-          showStatusDialog(
-            context: context,
-            title: 'Berhasil!',
-            message: message,
-            icon: Icons.check_circle,
-            iconColor: kDialogSuccess,
-          ).then((_) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => HomeScreen()),
-                  (route) => false,
+          if (widget.isPasswordReset) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => SetNewPasswordScreen(email: widget.email),
+              ),
             );
-          });
+          } else {
+            showStatusDialog(
+              context: context,
+              title: 'Berhasil!',
+              message: message,
+              icon: Icons.check_circle,
+              iconColor: kDialogSuccess,
+            ).then((_) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => HomeScreen()),
+                    (route) => false,
+              );
+            });
+          }
         }
       } else {
         if (mounted) {
-          showStatusDialog(
-              context: context, title: 'Gagal', message: message, icon: Icons.error, iconColor: kDialogError
-          );
+          showStatusDialog(context: context, title: 'Gagal', message: message, icon: Icons.error, iconColor: kDialogError);
           for (var c in _controllers) c.clear();
           _focusNodes[0].requestFocus();
         }
@@ -98,9 +104,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
     } catch (e) {
       print("Error verifying: $e");
       if (mounted) {
-        showStatusDialog(
-            context: context, title: 'Error', message: 'Terjadi kesalahan sistem.', icon: Icons.error, iconColor: kDialogError
-        );
+        showStatusDialog(context: context, title: 'Error', message: 'Terjadi kesalahan sistem.', icon: Icons.error, iconColor: kDialogError);
       }
     } finally {
       if (mounted) setState(() { _isLoading = false; });
@@ -131,12 +135,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
             children: [
               const Icon(Icons.mark_email_read_outlined, color: Colors.white, size: 80),
               const SizedBox(height: 20),
-              const Text('Verifikasi OTP', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                  widget.isPasswordReset ? 'Reset Password' : 'Verifikasi OTP',
+                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)
+              ),
               const SizedBox(height: 10),
               Text('Masukkan 4 digit kode yang dikirim ke:\n${widget.email}', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 30),
 
-              // [PERUBAHAN] INPUT 4 DIGIT (Lebar kotak diperbesar jadi 60 agar pas)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(4, (index) => SizedBox(
@@ -149,13 +155,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     maxLength: 1,
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
-                      counterText: "",
-                      filled: true,
-                      fillColor: Colors.white,
+                      counterText: "", filled: true, fillColor: Colors.white,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onChanged: (val) {
-                      if (val.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
+                      if (val.isNotEmpty && index < 3) _focusNodes[index + 1].requestFocus();
                     },
                   ),
                 )),

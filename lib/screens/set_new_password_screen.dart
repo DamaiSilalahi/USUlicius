@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/status_dialog.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 const Color kDialogSuccess = Color(0xFF388E3C);
@@ -17,10 +18,10 @@ class SetNewPasswordScreen extends StatefulWidget {
 class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
-  
+
   String? _newPasswordError;
   String? _confirmPasswordError;
 
@@ -33,7 +34,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     super.dispose();
   }
 
-  void _handleVerifyPassword() async { 
+  void _handleVerifyPassword() async {
     final newPassword = _newPasswordController.text;
     final confirmPassword = _confirmPasswordController.text;
 
@@ -43,7 +44,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     });
 
     bool isValid = true;
-    
+
     if (newPassword.isEmpty) {
       setState(() => _newPasswordError = "New Password cannot be empty");
       isValid = false;
@@ -55,36 +56,63 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
     if (!isValid) return;
 
     if (newPassword != confirmPassword) {
-      setState(() => _confirmPasswordError = "The password you entered are not the same");
+      setState(() => _confirmPasswordError = "The passwords you entered are not the same");
       isValid = false;
     }
     if (newPassword.length < 6) {
-       setState(() => _newPasswordError = "Password must be at least 6 characters");
-       isValid = false;
+      setState(() => _newPasswordError = "Password must be at least 6 characters");
+      isValid = false;
     }
+
+    if (widget.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error: Email missing.")));
+      return;
+    }
+
     if (!isValid) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isLoading = false);
 
-    if (mounted) {
-      await showStatusDialog(
-        context: context,
-        title: 'Verification Successful',
-        message: 'Your password has been reset.\nPlease log in again',
-        icon: Icons.check_circle, 
-        iconColor: kDialogSuccess,
-      );
-    }
+    try {
+      final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('resetPasswordViaOtp');
 
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+      final result = await callable.call(<String, dynamic>{
+        'email': widget.email,
+        'newPassword': newPassword,
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      final bool success = data['success'] ?? false;
+      final String message = data['message'] ?? 'Gagal mereset password.';
+
+      if (success) {
+        if (mounted) {
+          await showStatusDialog(
+            context: context,
+            title: 'Reset Successful',
+            message: 'Your password has been changed.\nPlease log in again.',
+            icon: Icons.check_circle,
+            iconColor: kDialogSuccess,
+          );
+
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginScreen(
+                initialMessage: "Password reset successful! Please login.",
+              )),
+                  (route) => false,
+            );
+          }
+        }
+      } else {
+        setState(() => _newPasswordError = message);
+      }
+
+    } catch (e) {
+      print("Reset Password Error: $e");
+      setState(() => _newPasswordError = "Failed to reset password. Server error.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -99,7 +127,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
           onPressed: () {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
+                  (route) => false,
             );
           },
         ),
@@ -112,7 +140,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
             top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.35 - kToolbarHeight, 
+            height: MediaQuery.of(context).size.height * 0.35 - kToolbarHeight,
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -136,9 +164,9 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
               ),
             ),
           ),
-          
+
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.33, 
+            top: MediaQuery.of(context).size.height * 0.33,
             left: 0,
             right: 0,
             bottom: 0.0,
@@ -154,7 +182,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                     ),
                   ),
                 ),
-                
+
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   decoration: const BoxDecoration(
@@ -202,7 +230,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        
+
                         _buildPasswordField(
                           controller: _newPasswordController,
                           errorText: _newPasswordError,
@@ -212,7 +240,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                             setState(() => _obscureNewPassword = !_obscureNewPassword);
                           },
                         ),
-                        
+
                         const SizedBox(height: 20),
 
                         const Text(
@@ -235,7 +263,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                             setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
                           },
                         ),
-                        
+
                         const SizedBox(height: 30),
 
                         SizedBox(
@@ -250,20 +278,20 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                             ),
                             child: _isLoading
                                 ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 3,
-                                    ),
-                                  )
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
                                 : const Text(
-                                    'Verify',
-                                    style: TextStyle(
-                                      fontSize: 16, 
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
+                              'Reset Password',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                       ],
