@@ -1,3 +1,5 @@
+// lib/screens/add_food_screen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +58,28 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     }
   }
 
+  // === FUNGSI RESET FORM (DIPERBAIKI) ===
+  void _resetForm() {
+    // 1. Turunkan keyboard
+    FocusScope.of(context).unfocus();
+
+    // 2. Reset status validasi form (hilangkan merah-merah)
+    _formKey.currentState?.reset();
+
+    // 3. Update State: Bersihkan Text Controller DI DALAM setState
+    // Ini memaksa UI untuk menggambar ulang kolom input menjadi kosong
+    setState(() {
+      _autovalidateMode = AutovalidateMode.disabled;
+      _nameController.text = '';       // Paksa kosong string
+      _locationController.text = '';   // Paksa kosong string
+      _priceController.text = '';      // Paksa kosong string
+      _descriptionController.text = '';// Paksa kosong string
+      _selectedImage = null;
+      _isImageMissing = false;
+      _isLoading = false;
+    });
+  }
+
   void _submitForm() async {
     setState(() {
       _autovalidateMode = AutovalidateMode.onUserInteraction;
@@ -83,8 +107,10 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         'location': _locationController.text.trim(),
         'price': int.parse(_priceController.text.replaceAll(RegExp(r'[^0-9]'), '')),
         'description': _descriptionController.text.trim(),
-        'imageUrl': imageUrl,
-        'rating': 0.0,
+        'image': imageUrl,
+        'averageRating': 0.0,
+        'ratingsCount': 0,
+        'category': 'Pilihan Mahasiswa',
         'createdAt': FieldValue.serverTimestamp(),
         'uploadedBy': FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
       });
@@ -133,7 +159,10 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
           actions: [
             TextButton(
               onPressed: () {
+                // 1. Tutup Dialog
                 Navigator.of(context).pop();
+
+                // 2. Langsung panggil reset form tanpa delay
                 _resetForm();
               },
               child: const Text(
@@ -147,40 +176,34 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     );
   }
 
-  void _resetForm() {
-    setState(() {
-      _autovalidateMode = AutovalidateMode.disabled;
-      _selectedImage = null;
-      _isImageMissing = false;
-    });
-
-    _nameController.clear();
-    _locationController.clear();
-    _priceController.clear();
-    _descriptionController.clear();
-    _formKey.currentState?.reset();
-  }
-
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Add Recommendation"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
+      // AppBar dihapus sepenuhnya
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 20.0),
           child: Form(
             key: _formKey,
             autovalidateMode: _autovalidateMode,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
+                // === JUDUL (Ikut Scroll) ===
+                Text(
+                  "Add Recommendation",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // ============================
+
                 _buildImageUploadCard(),
 
                 if (_isImageMissing)
@@ -254,6 +277,8 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 40),
               ],
             ),
           ),

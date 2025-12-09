@@ -51,26 +51,34 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        // PENTING: Gunakan fixed agar 4 item terlihat rapi dan label muncul
+        type: BottomNavigationBarType.fixed,
         currentIndex: widget.originIndex,
         onTap: (index) {
+          // Logika Navigasi
           if (index == widget.originIndex) {
+            // Jika menekan tombol yang sama dengan asal halaman, kembali (pop)
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
           } else {
+            // Jika menekan tombol lain, kembali dulu lalu pindah tab di HomeScreen
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
             Future.delayed(const Duration(milliseconds: 50), () {
-              // Pastikan homeScreenKey/favoriteScreenKey diimport/tersedia
-              // Karena navigasi ini memanggil fungsi di HomeScreen
+              // Index 0: Food (Home)
               if (index == 0) {
                 homeScreenKey.currentState?.navigateToPage(0);
                 homeContentKey.currentState?.scrollToTop();
-              } else if (index == 1) {
-                homeScreenKey.currentState?.navigateToPage(1);
+              }
+              // Index 2: Favorite (Geser dari 1 ke 2)
+              else if (index == 2) {
+                homeScreenKey.currentState?.navigateToPage(2);
                 favoriteScreenKey.currentState?.scrollToTop();
-              } else {
+              }
+              // Index 1 (Add) atau 3 (Settings)
+              else {
                 homeScreenKey.currentState?.navigateToPage(index);
               }
             });
@@ -79,6 +87,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         items: [
+          // 1. Food
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/images/food.png',
@@ -94,10 +103,21 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             label: 'Food',
           ),
+
+          // 2. Add (MENU BARU)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle_outline),
+            activeIcon: Icon(Icons.add_circle),
+            label: 'Add',
+          ),
+
+          // 3. Favorite
           const BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
+
+          // 4. Settings
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
@@ -668,32 +688,32 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               });
 
                               if (isValid) {
-                              try {
-                                final uid = FirebaseAuth.instance.currentUser!.uid;
+                                try {
+                                  final uid = FirebaseAuth.instance.currentUser!.uid;
 
-                                // Ambil username dari collection users
-                                final userDoc = await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(uid)
-                                    .get();
+                                  // Ambil username dari collection users
+                                  final userDoc = await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(uid)
+                                      .get();
 
-                                final username = userDoc.data()?['username'] ?? 'User';
+                                  final username = userDoc.data()?['username'] ?? 'User';
 
-                                await FirebaseFirestore.instance.collection('reviews').add({
-                                  'comment': reviewText,
-                                  'rating': _rating,
-                                  'foodID': widget.foodId,
-                                  'username': username, // dipakai untuk tampil
-                                  'userID': uid,        // boleh simpan untuk identitas
-                                  'date': Timestamp.now(),
-                                });
+                                  await FirebaseFirestore.instance.collection('reviews').add({
+                                    'comment': reviewText,
+                                    'rating': _rating,
+                                    'foodID': widget.foodId,
+                                    'username': username, // dipakai untuk tampil
+                                    'userID': uid,        // boleh simpan untuk identitas
+                                    'date': Timestamp.now(),
+                                  });
 
-                                print('✅ Review berhasil ditambahkan!');
-                                Navigator.pop(dialogContext);
-                              } catch (e) {
-                                print('❌ Gagal menambahkan review: $e');
+                                  print('✅ Review berhasil ditambahkan!');
+                                  Navigator.pop(dialogContext);
+                                } catch (e) {
+                                  print('❌ Gagal menambahkan review: $e');
+                                }
                               }
-                            }
                             },
                           ),
                         ],
