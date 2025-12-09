@@ -395,7 +395,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         })();
 
                         return _buildReviewItem(
-                          d['userID'] ?? 'User',
+                          d['username'] ?? 'User',
                           tanggal,
                           d['comment'] ?? '-',
                           roundedSheetRating,
@@ -668,20 +668,32 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               });
 
                               if (isValid) {
-                                try {
-                                  await FirebaseFirestore.instance.collection('reviews').add({
-                                    'comment': reviewText,
-                                    'rating': _rating,
-                                    'foodID': widget.foodId,
-                                    'userID': FirebaseAuth.instance.currentUser!.uid,
-                                    'date': Timestamp.now(),
-                                  });
-                                  print('✅ Review berhasil ditambahkan!');
-                                  Navigator.pop(dialogContext);
-                                } catch (e) {
-                                  print('❌ Gagal menambahkan review: $e');
-                                }
+                              try {
+                                final uid = FirebaseAuth.instance.currentUser!.uid;
+
+                                // Ambil username dari collection users
+                                final userDoc = await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(uid)
+                                    .get();
+
+                                final username = userDoc.data()?['username'] ?? 'User';
+
+                                await FirebaseFirestore.instance.collection('reviews').add({
+                                  'comment': reviewText,
+                                  'rating': _rating,
+                                  'foodID': widget.foodId,
+                                  'username': username, // dipakai untuk tampil
+                                  'userID': uid,        // boleh simpan untuk identitas
+                                  'date': Timestamp.now(),
+                                });
+
+                                print('✅ Review berhasil ditambahkan!');
+                                Navigator.pop(dialogContext);
+                              } catch (e) {
+                                print('❌ Gagal menambahkan review: $e');
                               }
+                            }
                             },
                           ),
                         ],
