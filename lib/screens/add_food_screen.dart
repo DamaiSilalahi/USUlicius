@@ -1,3 +1,5 @@
+// lib/screens/add_food_screen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +58,25 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     }
   }
 
+  // === FUNGSI RESET FORM ===
+  void _resetForm() {
+    FocusScope.of(context).unfocus(); // Tutup keyboard
+    _formKey.currentState?.reset();   // Reset validator
+
+    setState(() {
+      _autovalidateMode = AutovalidateMode.disabled;
+      _selectedImage = null;
+      _isImageMissing = false;
+      _isLoading = false;
+
+      // Bersihkan teks
+      _nameController.text = "";
+      _locationController.text = "";
+      _priceController.text = "";
+      _descriptionController.text = "";
+    });
+  }
+
   // Fungsi Submit Form
   void _submitForm() async {
     setState(() {
@@ -70,7 +91,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Upload Gambar ke Firebase Storage
+      // 1. Upload Gambar
       final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final Reference storageRef = FirebaseStorage.instance
           .ref()
@@ -80,14 +101,13 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       await storageRef.putFile(_selectedImage!);
       final String imageUrl = await storageRef.getDownloadURL();
 
+      // 2. Simpan ke Firestore
       await FirebaseFirestore.instance.collection('food_requests').add({
         'name': _nameController.text.trim(),
         'location': _locationController.text.trim(),
         'price': int.parse(_priceController.text.replaceAll(RegExp(r'[^0-9]'), '')),
         'description': _descriptionController.text.trim(),
         'imageUrl': imageUrl,
-
-        // Data pelengkap
         'rating': 0.0,
         'createdAt': FieldValue.serverTimestamp(),
         'uploadedBy': FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
@@ -125,14 +145,16 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             ],
           ),
           content: const Text(
-            "Rekomendasi Anda telah masuk ke sistem kami dan sedang menunggu persetujuan Admin sebelum tampil di menu utama.",
+            "Rekomendasi Anda telah masuk ke sistem kami dan sedang menunggu persetujuan Developer sebelum tampil di menu utama.",
             style: TextStyle(fontSize: 16),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Tutup Dialog
-                _resetForm(); // Reset Form agar bersih kembali
+                Navigator.of(context).pop();
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  _resetForm();
+                });
               },
               child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -142,40 +164,33 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     );
   }
 
-  void _resetForm() {
-    setState(() {
-      _autovalidateMode = AutovalidateMode.disabled;
-      _selectedImage = null;
-      _isImageMissing = false;
-    });
-
-    _nameController.clear();
-    _locationController.clear();
-    _priceController.clear();
-    _descriptionController.clear();
-    _formKey.currentState?.reset();
-  }
-
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Add Recommendation"),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
           child: Form(
             key: _formKey,
             autovalidateMode: _autovalidateMode,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
+                // === JUDUL BERWARNA HITAM ===
+                const Text(
+                  "Add Recommendation",
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black, // <-- Sudah diubah jadi Hitam
+                  ),
+                ),
+                const SizedBox(height: 30),
+                // ============================
+
                 _buildImageUploadCard(),
                 if (_isImageMissing)
                   Padding(
@@ -232,6 +247,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                         : const Text('Kirim Rekomendasi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
