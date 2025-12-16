@@ -50,7 +50,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       if (userQuery.docs.isEmpty) {
         setState(() {
-          _errorMessage = "We couldn't find an account with that email address.";
+          _errorMessage =
+              "We couldn't find an account with that email address.";
         });
         return;
       }
@@ -60,31 +61,42 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           .call({'email': email});
 
       if (mounted) {
-        showStatusDialog(
+        showDialog(
           context: context,
-          title: 'Check Your Email',
-          message: 'We\'ve sent a verification code to $email.',
-          icon: Icons.email,
-          iconColor: kPrimaryMaroon,
-        ).then((_) {
-          if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => VerificationScreen(
-                  email: email,
-                  isPasswordReset: true,
-                ),
+          builder: (ctx) => AlertDialog(
+            title: const Text('Check Your Email'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.email, color: kPrimaryMaroon, size: 40),
+                const SizedBox(height: 10),
+                Text("We've sent a verification code to $email."),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => VerificationScreen(
+                        email: email,
+                        isPasswordReset: true,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('OK'),
               ),
-            );
-          }
-        });
+            ],
+          ),
+        );
       }
-
     } catch (e) {
-      print("Error sending OTP: $e");
       if (mounted) {
         setState(() {
-          _errorMessage = "Failed to send code. Please try again later.";
+          _errorMessage =
+              "Failed to send code. Please try again later.";
         });
       }
     } finally {
@@ -97,9 +109,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: kPrimaryMaroon,
       appBar: AppBar(
-        backgroundColor: kPrimaryMaroon,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -108,90 +121,178 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
       body: Stack(
         children: [
-          // Header Logo (Sama seperti sebelumnya)
           Positioned(
-            top: 0, left: 0, right: 0,
-            height: MediaQuery.of(context).size.height * 0.35,
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.40,
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/logo.gif', width: 60, height: 60),
+                  Image.asset(
+                    'assets/images/logo.gif',
+                    width: 60,
+                    height: 60,
+                  ),
                   const SizedBox(width: 10),
-                  const Text('USULicius', style: TextStyle(color: Colors.white, fontSize: 35, fontFamily: 'Roboto Flex', fontWeight: FontWeight.w700)),
+                  const Text(
+                    'USULicius',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 35,
+                      fontFamily: 'Roboto Flex',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-
-          // Container Putih
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.30,
-            left: 0, right: 0, bottom: 0,
+            top: MediaQuery.of(context).size.height * 0.38,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: Stack(
-              alignment: Alignment.topCenter,
+              fit: StackFit.expand,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 0, left: 10, right: 10),
+                  padding:
+                      const EdgeInsets.only(top: 0, left: 10, right: 10),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFBC8F9B).withOpacity(0.5),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                      color:
+                          const Color(0xFFBC8F9B).withOpacity(0.5),
+                      borderRadius:
+                          const BorderRadius.vertical(
+                              top: Radius.circular(30)),
                     ),
                   ),
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 10),
-                  width: double.infinity,
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 40, 24, 30),
+                    padding:
+                        const EdgeInsets.fromLTRB(24, 40, 24, 30),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const Text('Forgot Password', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87, fontFamily: 'Roboto Flex')),
-                        const SizedBox(height: 30),
                         const Text(
-                          'Enter the email address with your account and we\'ll send an email with confirmation to reset your password.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.black54, fontSize: 14, height: 1.4, fontFamily: 'Roboto Flex'),
+                          'Forgot Password',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                            fontFamily: 'Roboto Flex',
+                          ),
                         ),
                         const SizedBox(height: 30),
-
+                        const Text(
+                          "Enter the email address with your account and we'll send an email with confirmation to reset your password.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 14,
+                            height: 1.4,
+                            fontFamily: 'Roboto Flex',
+                          ),
+                        ),
+                        const SizedBox(height: 30),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: Colors.black, fontSize: 16, fontFamily: 'Roboto Flex', fontWeight: FontWeight.w700),
-                          decoration: const InputDecoration(
-                            hintText: 'Email',
-                            prefixIcon: Icon(Icons.email),
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontFamily: 'Roboto Flex',
+                            fontWeight: FontWeight.w700,
                           ),
-                        ),
-
-                        if (_errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12.0),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                              decoration: BoxDecoration(color: Colors.red.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                              child: Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red, fontSize: 13, fontFamily: 'Roboto Flex')),
+                          decoration: InputDecoration(
+                            hintText: 'Email',
+                            prefixIcon: const Icon(
+                              Icons.email,
+                              color: kPrimaryMaroon,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(10),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: kPrimaryMaroon),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                  color: kPrimaryMaroon,
+                                  width: 2),
                             ),
                           ),
-
+                        ),
+                        if (_errorMessage != null)
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(top: 12),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 15),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.15),
+                                borderRadius:
+                                    BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 13,
+                                  fontFamily: 'Roboto Flex',
+                                ),
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleSendCode,
+                            onPressed:
+                                _isLoading ? null : _handleSendCode,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kPrimaryMaroon,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 15),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(10),
+                              ),
+                            ),
                             child: _isLoading
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('Send Code'),
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child:
+                                        CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Send Code',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                           ),
                         ),
                         const SizedBox(height: 20),
