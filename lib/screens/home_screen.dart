@@ -304,7 +304,7 @@ class HomeContentState extends State<HomeContent> {
           const SizedBox(width: 8),
           Expanded(
             child: CategoryItem(
-              label: 'Pilihan Mahasiswa',
+              label: 'Pilihan Mhs',
               color: Colors.blue,
               imageAsset: 'assets/images/PilihanMahasiswa.png',
               onTap: () {
