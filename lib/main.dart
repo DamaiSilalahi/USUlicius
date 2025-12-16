@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
+import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
+import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/verification_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
@@ -117,7 +121,39 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const SplashScreen(),
+      home: const AuthGate(),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: kPrimaryMaroon,
+            body: Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          final User user = snapshot.data!;
+          if (user.emailVerified) {
+            return HomeScreen();
+          } else {
+            return VerificationScreen(email: user.email!);
+          }
+        }
+        return const LoginScreen();
+      },
     );
   }
 }
