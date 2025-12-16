@@ -1,5 +1,3 @@
-// lib/screens/food_detail_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,34 +48,26 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        // PENTING: Gunakan fixed agar 4 item terlihat rapi
         type: BottomNavigationBarType.fixed,
         currentIndex: widget.originIndex,
         onTap: (index) {
-          // Logika Navigasi
           if (index == widget.originIndex) {
-            // Jika menekan tombol yang sama dengan asal halaman, kembali (pop)
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
           } else {
-            // Jika menekan tombol lain, kembali dulu lalu pindah tab di HomeScreen
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
             Future.delayed(const Duration(milliseconds: 50), () {
-              // Panggil navigasi di HomeScreen
-              // Index 0: Food
               if (index == 0) {
                 homeScreenKey.currentState?.navigateToPage(0);
                 homeContentKey.currentState?.scrollToTop();
               }
-              // Index 2: Favorite (Sekarang di urutan ke-3)
               else if (index == 2) {
                 homeScreenKey.currentState?.navigateToPage(2);
                 favoriteScreenKey.currentState?.scrollToTop();
               }
-              // Index 1 (Add) atau 3 (Settings)
               else {
                 homeScreenKey.currentState?.navigateToPage(index);
               }
@@ -87,7 +77,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         items: [
-          // 1. Food
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/images/food.png',
@@ -103,21 +92,15 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             label: 'Food',
           ),
-
-          // 2. Add (MENU BARU)
           const BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
             activeIcon: Icon(Icons.add_circle),
             label: 'Add',
           ),
-
-          // 3. Favorite
           const BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
-
-          // 4. Settings
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
@@ -139,7 +122,22 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               bottomRight: Radius.circular(20.0),
             ),
             child: widget.imageUrl.isNotEmpty
-                ? Image.asset(
+                ? (widget.imageUrl.startsWith('http')
+                ? Image.network(
+              widget.imageUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                );
+              },
+            )
+                : Image.asset(
               widget.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
@@ -148,13 +146,14 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
                 );
               },
-            )
+            ))
                 : Container(
               color: Colors.grey[200],
               child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
             ),
           ),
         ),
+
         Container(
           height: 350,
           width: double.infinity,
@@ -171,6 +170,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
         ),
+
         Positioned(
           top: 40,
           left: 10,
@@ -182,6 +182,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
         ),
+
         Positioned(
           bottom: 20,
           right: 20,
@@ -253,12 +254,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
           const SizedBox(height: 16),
 
-          // === UPDATE: LOKASI TURUN KE BAWAH ===
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start, // Ikon tetap di atas
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2.0), // Padding agar sejajar teks
+                padding: const EdgeInsets.only(top: 2.0),
                 child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
               ),
               const SizedBox(width: 8),
@@ -266,12 +266,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 child: Text(
                   widget.location,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  // Overflow ellipsis dihapus agar teks turun ke bawah (multiline)
                 ),
               ),
             ],
           ),
-          // ======================================
 
           const SizedBox(height: 24),
 
@@ -420,14 +418,14 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               .doc(d['userID'])
                               .snapshots(),
                           builder: (context, userSnap) {
-                            if (!userSnap.hasData) {
-                              return const SizedBox();
+                            String name = 'User';
+                            String photoURL = '';
+
+                            if (userSnap.hasData && userSnap.data!.exists) {
+                              final user = userSnap.data!.data() as Map<String, dynamic>;
+                              name = user['username'] ?? 'User';
+                              photoURL = user['photoURL'] ?? '';
                             }
-
-                            final user = userSnap.data!.data() as Map<String, dynamic>?;
-
-                            final String name = user?['username'] ?? 'User';
-                            final String photoURL = user?['photoURL'] ?? '';
 
                             return _buildReviewItem(
                               name,
@@ -502,6 +500,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         children: [
           Row(
             children: [
+              // Avatar user di review
               CircleAvatar(
                 radius: 20,
                 backgroundImage: photoURL.isNotEmpty
@@ -705,7 +704,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                     'rating': _rating,
                                     'foodID': widget.foodId,
                                     'userID': FirebaseAuth.instance.currentUser!.uid,
-                                    'date': Timestamp.now(),
+                                    'date': FieldValue.serverTimestamp(),
                                   });
                                   print('✅ Review berhasil ditambahkan!');
                                   Navigator.pop(dialogContext);

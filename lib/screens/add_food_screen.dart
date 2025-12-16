@@ -1,5 +1,3 @@
-// lib/screens/add_food_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -202,7 +200,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 _buildTextFormField(
                     controller: _nameController,
                     label: 'Nama Makanan',
-                    hint: 'Contoh: Nasi Goreng Spesial',
+                    hint: 'Nasi Goreng Spesial',
                     errorText: 'Nama makanan wajib diisi'
                 ),
                 const SizedBox(height: 16),
@@ -210,7 +208,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 _buildTextFormField(
                     controller: _locationController,
                     label: 'Lokasi',
-                    hint: 'Contoh: Kantin Teknik',
+                    hint: 'Kantin Teknik',
                     errorText: 'Lokasi wajib diisi',
                     prefixIcon: Icons.location_on_outlined
                 ),
@@ -219,7 +217,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                 _buildTextFormField(
                     controller: _priceController,
                     label: 'Harga',
-                    hint: 'Contoh: 15000',
+                    hint: '15000',
                     errorText: 'Harga wajib diisi',
                     prefixIcon: Icons.attach_money,
                     inputType: TextInputType.number,

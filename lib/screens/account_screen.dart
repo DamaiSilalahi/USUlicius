@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/widgets/account_field.dart';
-import 'package:usulicius_kelompok_lucky/widgets/delete_account.dart';
-import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/change_email_screen.dart';
-
+import 'package:usulicius_kelompok_lucky/widgets/photo_profile.dart'; // Pastikan file ini ada
+import 'package:usulicius_kelompok_lucky/widgets/delete_account.dart'; // Pastikan file ini ada
+import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class AccountScreen extends StatefulWidget {
   final String initialName;
@@ -95,10 +96,13 @@ class _AccountScreenState extends State<AccountScreen> {
     _oldPasswordController.clear();
     _newPasswordController.clear();
     _confirmNewPasswordController.clear();
-    _oldPasswordError = null;
-    _newPasswordError = null;
-    _confirmNewPasswordError = null;
+    setState(() {
+      _oldPasswordError = null;
+      _newPasswordError = null;
+      _confirmNewPasswordError = null;
+    });
   }
+
 
   void _saveChanges() async {
     setState(() {
@@ -139,13 +143,21 @@ class _AccountScreenState extends State<AccountScreen> {
         setState(() => _confirmNewPasswordError = 'Confirm cannot be empty');
         validationPassed = false;
       }
-      if (validationPassed && newPassword.length < 6) {
-        setState(() => _newPasswordError = 'Password min 6 chars');
-        validationPassed = false;
-      }
-      if (validationPassed && newPassword != confirmPassword) {
-        setState(() => _confirmNewPasswordError = 'Passwords do not match');
-        validationPassed = false;
+
+      if (validationPassed) {
+        if (newPassword.length < 6) {
+          setState(() => _newPasswordError = 'Password min 6 chars');
+          validationPassed = false;
+        }
+        if (newPassword != confirmPassword) {
+          setState(() => _confirmNewPasswordError = 'Passwords do not match');
+          validationPassed = false;
+        }
+
+        if (newPassword == oldPassword) {
+          setState(() => _newPasswordError = 'New password cannot be the same as old password');
+          validationPassed = false;
+        }
       }
     }
 
@@ -153,6 +165,7 @@ class _AccountScreenState extends State<AccountScreen> {
       setState(() => _isLoading = false);
       return;
     }
+
 
     if (!isNameChanged && !isPasswordChanged && !isPhotoChanged) {
       setState(() => _isLoading = false);
@@ -167,7 +180,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
       if (isPasswordChanged) {
         final credential = EmailAuthProvider.credential(
-          email: _currentEmail,
+          email: _user!.email!,
           password: _oldPasswordController.text,
         );
 
@@ -226,9 +239,11 @@ class _AccountScreenState extends State<AccountScreen> {
       String errorMessage = e.message ?? 'An unknown error occurred.';
 
       if (e.code == 'wrong-password' && isPasswordChanged) {
-        setState(() => _oldPasswordError = 'Incorrect Password');
-      } else if (e.code == 'requires-recent-login' && isPasswordChanged) {
-        setState(() => _oldPasswordError = 'Re-login required.');
+        setState(() => _oldPasswordError = 'Incorrect Old Password');
+      } else if (e.code == 'requires-recent-login') {
+        setState(() => _oldPasswordError = 'Session expired. Please relogin.');
+      } else if (e.code == 'weak-password') {
+        setState(() => _newPasswordError = 'Password too weak.');
       }
 
       setState(() => _isLoading = false);
@@ -281,6 +296,7 @@ class _AccountScreenState extends State<AccountScreen> {
         } catch (_) {}
 
         await _firestore.collection('users').doc(_user!.uid).delete();
+
         await _user!.delete();
 
         if (mounted) {
@@ -290,14 +306,20 @@ class _AccountScreenState extends State<AccountScreen> {
                 initialMessage: "Account deleted successfully.",
               ),
             ),
-            (Route<dynamic> route) => false,
+                (Route<dynamic> route) => false,
           );
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: ${e.toString()}')),
-        );
+        if (e is FirebaseAuthException && e.code == 'requires-recent-login') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please Log Out and Log In again to delete account.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete: ${e.toString()}')),
+          );
+        }
       }
     }
   }
@@ -311,7 +333,10 @@ class _AccountScreenState extends State<AccountScreen> {
     if (newEmail != null && newEmail.isNotEmpty && mounted) {
       try {
         setState(() => _isLoading = true);
-        await _user?.verifyBeforeUpdateEmail(newEmail);
+        await FirebaseFunctions.instance
+            .httpsCallable('updateUserEmail')
+            .call({'newEmail': newEmail});
+
         await _firestore.collection('users').doc(_user!.uid).update({
           'email': newEmail
         });
@@ -324,18 +349,13 @@ class _AccountScreenState extends State<AccountScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,
-            content: Text('Email updated! Please verify.'),
+            content: Text('Email berhasil diubah secara otomatis!'),
           ),
         );
       } catch (e) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(backgroundColor: Colors.red, content: Text('Error: $e')),
-        );
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     const Color maroonColor = Color(0xFF8B0000);
@@ -456,10 +476,10 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                            )
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                      )
                           : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),

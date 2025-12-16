@@ -213,7 +213,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                         const SizedBox(height: 12),
                         const Center(
                           child: Text(
-                            'Your new password must be different\nfrom previously used password',
+                            'Please create a new password for your account.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.black54,

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/widgets/status_dialog.dart';
-import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/set_new_password_screen.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 const Color kDialogError = Color(0xFFD32F2F);
@@ -32,13 +32,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
   @override
   void initState() {
     super.initState();
-    for (int i = 0; i < 4; i++) {
-      _controllers[i].addListener(() {
-        if (_controllers[i].text.length == 1 && i < 3) {
-          _focusNodes[i + 1].requestFocus();
-        }
-      });
-    }
   }
 
   @override
@@ -79,18 +72,22 @@ class _VerificationScreenState extends State<VerificationScreen> {
               ),
             );
           } else {
-            showStatusDialog(
-              context: context,
-              title: 'Berhasil!',
-              message: message,
-              icon: Icons.check_circle,
-              iconColor: kDialogSuccess,
-            ).then((_) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => HomeScreen()),
-                    (route) => false,
-              );
-            });
+            await FirebaseAuth.instance.signOut();
+
+            if (mounted) {
+              showStatusDialog(
+                context: context,
+                title: 'Verifikasi Berhasil!',
+                message: 'Akun Anda telah aktif.\nSilakan Login untuk melanjutkan.',
+                icon: Icons.check_circle,
+                iconColor: kDialogSuccess,
+              ).then((_) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                );
+              });
+            }
           }
         }
       } else {
@@ -127,7 +124,17 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kPrimaryMaroon,
-      appBar: AppBar(backgroundColor: kPrimaryMaroon, elevation: 0, leading: const BackButton(color: Colors.white)),
+      appBar: AppBar(
+          backgroundColor: kPrimaryMaroon,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (!widget.isPasswordReset) FirebaseAuth.instance.signOut();
+              Navigator.of(context).pop();
+            },
+          )
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -159,7 +166,15 @@ class _VerificationScreenState extends State<VerificationScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onChanged: (val) {
-                      if (val.isNotEmpty && index < 3) _focusNodes[index + 1].requestFocus();
+                      if (val.isNotEmpty) {
+                        if (index < 3) _focusNodes[index + 1].requestFocus();
+                        if (index == 3) {
+                          FocusScope.of(context).unfocus();
+                          _handleVerify();
+                        }
+                      } else {
+                        if (index > 0) _focusNodes[index - 1].requestFocus();
+                      }
                     },
                   ),
                 )),

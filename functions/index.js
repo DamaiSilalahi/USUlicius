@@ -116,3 +116,31 @@ exports.resetPasswordViaOtp = onCall(async (request) => {
     throw new HttpsError("internal", "Gagal mereset password.");
   }
 });
+
+exports.updateUserEmail = onCall(async (request) => {
+  const newEmail = request.data.newEmail;
+  const uid = request.auth.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Anda harus login dulu.");
+  }
+  if (!newEmail) {
+    throw new HttpsError("invalid-argument", "Email baru tidak boleh kosong.");
+  }
+
+  try {
+    await admin.auth().updateUser(uid, {
+      email: newEmail,
+      emailVerified: true
+    });
+
+    console.log(`Email user ${uid} berhasil diubah ke ${newEmail} oleh Robot.`);
+    return { success: true, message: "Email berhasil diubah." };
+
+  } catch (error) {
+    console.error("Gagal update email:", error);
+    if (error.code === 'auth/email-already-exists') {
+        throw new HttpsError("already-exists", "Email sudah digunakan akun lain.");
+    }
+    throw new HttpsError("internal", "Gagal mengubah email.");
+  }
+});
