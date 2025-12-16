@@ -1,5 +1,3 @@
-// lib/screens/add_food_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,28 +56,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     }
   }
 
-  // === FUNGSI RESET FORM (DIPERBAIKI) ===
-  void _resetForm() {
-    // 1. Turunkan keyboard
-    FocusScope.of(context).unfocus();
-
-    // 2. Reset status validasi form (hilangkan merah-merah)
-    _formKey.currentState?.reset();
-
-    // 3. Update State: Bersihkan Text Controller DI DALAM setState
-    // Ini memaksa UI untuk menggambar ulang kolom input menjadi kosong
-    setState(() {
-      _autovalidateMode = AutovalidateMode.disabled;
-      _nameController.text = '';       // Paksa kosong string
-      _locationController.text = '';   // Paksa kosong string
-      _priceController.text = '';      // Paksa kosong string
-      _descriptionController.text = '';// Paksa kosong string
-      _selectedImage = null;
-      _isImageMissing = false;
-      _isLoading = false;
-    });
-  }
-
+  // Fungsi Submit Form
   void _submitForm() async {
     setState(() {
       _autovalidateMode = AutovalidateMode.onUserInteraction;
@@ -93,6 +70,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Upload Gambar ke Firebase Storage
       final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final Reference storageRef = FirebaseStorage.instance
           .ref()
@@ -102,19 +80,20 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       await storageRef.putFile(_selectedImage!);
       final String imageUrl = await storageRef.getDownloadURL();
 
-      await FirebaseFirestore.instance.collection('foods').add({
+      await FirebaseFirestore.instance.collection('food_requests').add({
         'name': _nameController.text.trim(),
         'location': _locationController.text.trim(),
         'price': int.parse(_priceController.text.replaceAll(RegExp(r'[^0-9]'), '')),
         'description': _descriptionController.text.trim(),
-        'image': imageUrl,
-        'averageRating': 0.0,
-        'ratingsCount': 0,
-        'category': 'Pilihan Mahasiswa',
+        'imageUrl': imageUrl,
+
+        // Data pelengkap
+        'rating': 0.0,
         'createdAt': FieldValue.serverTimestamp(),
         'uploadedBy': FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
       });
 
+      // 3. Tampilkan pesan sukses
       if (mounted) {
         _showSuccessDialog();
       }
@@ -123,16 +102,11 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       print("Error uploading food: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to save: ${e.toString()}"),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text("Gagal mengirim: ${e.toString()}"), backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -142,33 +116,25 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: const Row(
             children: [
               Icon(Icons.check_circle, color: Colors.green),
               SizedBox(width: 10),
-              Text("Success"),
+              Text("Berhasil Dikirim"),
             ],
           ),
           content: const Text(
-            "Thank you for the food recommendation you provided.",
+            "Rekomendasi Anda telah masuk ke sistem kami dan sedang menunggu persetujuan Admin sebelum tampil di menu utama.",
             style: TextStyle(fontSize: 16),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                // 1. Tutup Dialog
-                Navigator.of(context).pop();
-
-                // 2. Langsung panggil reset form tanpa delay
-                _resetForm();
+                Navigator.of(context).pop(); // Tutup Dialog
+                _resetForm(); // Reset Form agar bersih kembali
               },
-              child: const Text(
-                "OK",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -176,81 +142,82 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     );
   }
 
+  void _resetForm() {
+    setState(() {
+      _autovalidateMode = AutovalidateMode.disabled;
+      _selectedImage = null;
+      _isImageMissing = false;
+    });
+
+    _nameController.clear();
+    _locationController.clear();
+    _priceController.clear();
+    _descriptionController.clear();
+    _formKey.currentState?.reset();
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      // AppBar dihapus sepenuhnya
+      appBar: AppBar(
+        title: const Text("Add Recommendation"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20.0, 30.0, 20.0, 20.0),
+          padding: const EdgeInsets.all(20.0),
           child: Form(
             key: _formKey,
             autovalidateMode: _autovalidateMode,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-                // === JUDUL (Ikut Scroll) ===
-                Text(
-                  "Add Recommendation",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // ============================
-
                 _buildImageUploadCard(),
-
                 if (_isImageMissing)
                   Padding(
                     padding: const EdgeInsets.only(top: 6.0, left: 12.0),
-                    child: Text(
-                      'Food image is required',
-                      style: TextStyle(color: Colors.red[700], fontSize: 12),
-                    ),
+                    child: Text('Wajib upload foto makanan', style: TextStyle(color: Colors.red[700], fontSize: 12)),
                   ),
-
                 const SizedBox(height: 20),
 
                 _buildTextFormField(
-                  controller: _nameController,
-                  label: 'Food Name',
-                  hint: 'Enter food name',
-                  errorText: 'Food name is required',
+                    controller: _nameController,
+                    label: 'Nama Makanan',
+                    hint: 'Contoh: Nasi Goreng Spesial',
+                    errorText: 'Nama makanan wajib diisi'
                 ),
                 const SizedBox(height: 16),
 
                 _buildTextFormField(
-                  controller: _locationController,
-                  label: 'Location',
-                  hint: 'Enter location',
-                  errorText: 'Location is required',
-                  prefixIcon: Icons.location_on_outlined,
+                    controller: _locationController,
+                    label: 'Lokasi',
+                    hint: 'Contoh: Kantin Teknik',
+                    errorText: 'Lokasi wajib diisi',
+                    prefixIcon: Icons.location_on_outlined
                 ),
                 const SizedBox(height: 16),
 
                 _buildTextFormField(
-                  controller: _priceController,
-                  label: 'Price',
-                  hint: 'Example: 15000',
-                  errorText: 'Price is required',
-                  prefixIcon: Icons.attach_money,
-                  inputType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    controller: _priceController,
+                    label: 'Harga',
+                    hint: 'Contoh: 15000',
+                    errorText: 'Harga wajib diisi',
+                    prefixIcon: Icons.attach_money,
+                    inputType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly]
                 ),
                 const SizedBox(height: 16),
 
                 _buildTextFormField(
-                  controller: _descriptionController,
-                  label: 'Description',
-                  hint: 'Enter food description...',
-                  errorText: 'Description cannot be empty',
-                  maxLines: 5,
+                    controller: _descriptionController,
+                    label: 'Deskripsi',
+                    hint: 'Ceritakan rasanya...',
+                    errorText: 'Deskripsi wajib diisi',
+                    maxLines: 5
                 ),
                 const SizedBox(height: 30),
 
@@ -259,26 +226,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      'Save',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                        : const Text('Kirim Rekomendasi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
-
-                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -297,36 +250,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _isImageMissing ? Colors.red : Colors.black54,
-            width: _isImageMissing ? 2.0 : 1.0,
-          ),
+          border: Border.all(color: _isImageMissing ? Colors.red : Colors.black54, width: _isImageMissing ? 2.0 : 1.0),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: _selectedImage != null
-              ? Image.file(
-            _selectedImage!,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-          )
+              ? Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
               : Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                  Icons.upload_file,
-                  size: 50,
-                  color: _isImageMissing ? Colors.red : Colors.grey[400]
-              ),
+              Icon(Icons.upload_file, size: 50, color: _isImageMissing ? Colors.red : Colors.grey[400]),
               const SizedBox(height: 10),
-              Text(
-                'Tap to upload food image',
-                style: TextStyle(
-                  color: _isImageMissing ? Colors.red : Colors.grey[600],
-                  fontSize: 16,
-                ),
-              ),
+              Text('Ketuk untuk upload foto', style: TextStyle(color: _isImageMissing ? Colors.red : Colors.grey[600], fontSize: 16)),
             ],
           ),
         ),
@@ -347,50 +282,25 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
           keyboardType: inputType,
           inputFormatters: inputFormatters,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return errorText;
-            }
-            return null;
-          },
+          validator: (value) => (value == null || value.trim().isEmpty) ? errorText : null,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Colors.grey),
-            prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, color: Colors.grey)
-                : null,
+            prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.grey) : null,
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.all(16),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.black54, width: 1.0),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.black, width: 2.0),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 2.0),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 2.5),
-            ),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black54, width: 1.0)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.black, width: 2.0)),
+            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 2.0)),
+            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red, width: 2.5)),
           ),
         ),
       ],
