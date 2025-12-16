@@ -119,8 +119,10 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true, // Agar background menyatu ke atas
+      backgroundColor: kPrimaryMaroon,
       appBar: AppBar(
-        backgroundColor: kPrimaryMaroon,
+        backgroundColor: Colors.transparent, // Transparan
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -132,15 +134,14 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
           },
         ),
       ),
-      resizeToAvoidBottomInset: false,
-      backgroundColor: kPrimaryMaroon,
       body: Stack(
         children: [
+          // 1. BAGIAN LOGO (Sama persis dengan Login/Forgot: Height 0.40)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            height: MediaQuery.of(context).size.height * 0.35 - kToolbarHeight,
+            height: MediaQuery.of(context).size.height * 0.40,
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -165,14 +166,17 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
             ),
           ),
 
+          // 2. BAGIAN CONTAINER PUTIH (Sama persis: Top 0.38 & Bottom 0)
           Positioned(
-            top: MediaQuery.of(context).size.height * 0.33,
+            top: MediaQuery.of(context).size.height * 0.38,
             left: 0,
             right: 0,
-            bottom: 0.0,
+            bottom: 0.0, // Memaksa container menempel ke bawah
             child: Stack(
+              fit: StackFit.expand, // Memaksa child mengisi area full
               alignment: Alignment.topCenter,
               children: [
+                // Layer Shadow/Accent Pink
                 Padding(
                   padding: const EdgeInsets.only(top: 0, left: 10, right: 10),
                   child: Container(
@@ -183,6 +187,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                   ),
                 ),
 
+                // Layer Utama Putih
                 Container(
                   margin: const EdgeInsets.only(top: 10),
                   decoration: const BoxDecoration(
@@ -190,7 +195,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                     borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
+                    padding: const EdgeInsets.fromLTRB(24, 40, 24, 30),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -220,6 +225,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                         ),
                         const SizedBox(height: 30),
 
+                        // Form Inputs
                         const Text(
                           'New Password',
                           style: TextStyle(
@@ -230,7 +236,6 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-
                         _buildPasswordField(
                           controller: _newPasswordController,
                           errorText: _newPasswordError,
@@ -253,7 +258,6 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-
                         _buildPasswordField(
                           controller: _confirmPasswordController,
                           errorText: _confirmPasswordError,
@@ -271,27 +275,29 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _handleVerifyPassword,
                             style: ElevatedButton.styleFrom(
+                              backgroundColor: kPrimaryMaroon,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
+                                borderRadius: BorderRadius.circular(10), // Samakan dengan style tombol Login
                               ),
                             ),
                             child: _isLoading
                                 ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
-                              ),
-                            )
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
                                 : const Text(
-                              'Reset Password',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                                    'Reset Password',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
@@ -315,54 +321,58 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
   }) {
     final bool hasError = errorText != null;
 
-    return TextFormField(
-      controller: controller,
-      obscureText: isObscure,
-      style: const TextStyle(
-        color: Colors.black,
-        fontSize: 16,
-        fontFamily: 'Roboto Flex',
-        fontWeight: FontWeight.w700,
-      ),
-      decoration: InputDecoration(
-        hintText: hasError ? errorText : hintText,
-        hintStyle: TextStyle(
-          color: hasError ? kDialogError : Colors.grey.shade600,
-          fontWeight: hasError ? FontWeight.w500 : FontWeight.normal,
-        ),
-        errorText: null,
-        helperText: ' ',
-        helperStyle: const TextStyle(height: 0.01),
-        errorStyle: const TextStyle(height: 0.01),
-
-        suffixIcon: IconButton(
-          icon: Icon(
-            isObscure ? Icons.visibility_off : Icons.visibility,
-            color: kPrimaryMaroon,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          obscureText: isObscure,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontFamily: 'Roboto Flex',
+            fontWeight: FontWeight.w700,
           ),
-          onPressed: toggleObscure,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.normal,
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isObscure ? Icons.visibility_off : Icons.visibility,
+                color: kPrimaryMaroon,
+              ),
+              onPressed: toggleObscure,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: hasError ? kDialogError : kPrimaryMaroon.withOpacity(0.4), width: 1.5),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: hasError ? kDialogError : kPrimaryMaroon, width: 2),
+            ),
+          ),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: hasError ? kDialogError : kPrimaryMaroon, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: hasError ? kDialogError : kPrimaryMaroon, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: hasError ? kDialogError : kPrimaryMaroon, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: kDialogError, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: kDialogError, width: 2),
-        ),
-      ),
+        // Menampilkan pesan error di bawah text field agar layout tidak bergeser aneh
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 5.0, left: 5.0),
+            child: Text(
+              errorText,
+              style: const TextStyle(
+                color: kDialogError,
+                fontSize: 12,
+                fontFamily: 'Roboto Flex',
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
