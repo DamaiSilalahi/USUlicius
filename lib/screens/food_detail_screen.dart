@@ -1,3 +1,5 @@
+// lib/screens/food_detail_screen.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -30,7 +32,6 @@ class FoodDetailScreen extends StatefulWidget {
 }
 
 class _FoodDetailScreenState extends State<FoodDetailScreen> {
-
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
@@ -48,8 +49,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
         currentIndex: widget.originIndex,
+        type: BottomNavigationBarType.fixed, // Pastikan type fixed agar icon add muncul
         onTap: (index) {
           if (index == widget.originIndex) {
             if (Navigator.canPop(context)) {
@@ -60,15 +61,14 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               Navigator.pop(context);
             }
             Future.delayed(const Duration(milliseconds: 50), () {
+              // Navigasi yang sesuai dengan urutan index baru
               if (index == 0) {
                 homeScreenKey.currentState?.navigateToPage(0);
                 homeContentKey.currentState?.scrollToTop();
-              }
-              else if (index == 2) {
+              } else if (index == 2) { // Favorite sekarang di index 2
                 homeScreenKey.currentState?.navigateToPage(2);
                 favoriteScreenKey.currentState?.scrollToTop();
-              }
-              else {
+              } else {
                 homeScreenKey.currentState?.navigateToPage(index);
               }
             });
@@ -122,38 +122,25 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               bottomRight: Radius.circular(20.0),
             ),
             child: widget.imageUrl.isNotEmpty
-                ? (widget.imageUrl.startsWith('http')
-                ? Image.network(
+                ? Image.asset(
               widget.imageUrl,
               fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const Center(child: CircularProgressIndicator());
-              },
               errorBuilder: (context, error, stackTrace) {
+                print("Error load asset di Detail: ${widget.imageUrl}");
                 return Container(
                   color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                  child: const Icon(Icons.broken_image,
+                      size: 100, color: Colors.grey),
                 );
               },
             )
-                : Image.asset(
-              widget.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                );
-              },
-            ))
                 : Container(
               color: Colors.grey[200],
-              child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+              child: const Icon(Icons.broken_image,
+                  size: 100, color: Colors.grey),
             ),
           ),
         ),
-
         Container(
           height: 350,
           width: double.infinity,
@@ -170,19 +157,18 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
         ),
-
         Positioned(
           top: 40,
           left: 10,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 28),
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: Colors.white, size: 28),
             onPressed: () => Navigator.pop(context),
             style: IconButton.styleFrom(
               backgroundColor: Colors.black.withOpacity(0.3),
             ),
           ),
         ),
-
         Positioned(
           bottom: 20,
           right: 20,
@@ -190,7 +176,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.2), blurRadius: 10)
+              ],
             ),
             child: IconButton(
               icon: Icon(
@@ -259,7 +248,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 2.0),
-                child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
+                child: Icon(Icons.location_on,
+                    color: Colors.grey[600], size: 18),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -270,7 +260,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 24),
 
           const Text(
@@ -316,7 +305,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
         ...List.generate(
           5 - rating,
-              (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
+              (index) =>
+          const Icon(Icons.star_border, color: Colors.amber, size: 20),
         ),
         const SizedBox(width: 8),
         Text(
@@ -356,7 +346,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         .doc(widget.foodId)
         .snapshots();
   }
-
 
   void _showReviewSheet(BuildContext context) {
     showModalBottomSheet(
@@ -404,7 +393,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                             "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
                             "Jul", "Ags", "Sep", "Okt", "Nov", "Des"
                           ];
-                          tanggal = "${dt.day} ${bulan[dt.month - 1]} ${dt.year}";
+                          tanggal =
+                          "${dt.day} ${bulan[dt.month - 1]} ${dt.year}";
                         }
 
                         int roundedSheetRating = (() {
@@ -418,14 +408,15 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               .doc(d['userID'])
                               .snapshots(),
                           builder: (context, userSnap) {
-                            String name = 'User';
-                            String photoURL = '';
-
-                            if (userSnap.hasData && userSnap.data!.exists) {
-                              final user = userSnap.data!.data() as Map<String, dynamic>;
-                              name = user['username'] ?? 'User';
-                              photoURL = user['photoURL'] ?? '';
+                            if (!userSnap.hasData) {
+                              return const SizedBox();
                             }
+
+                            final user =
+                            userSnap.data!.data() as Map<String, dynamic>?;
+
+                            final String name = user?['username'] ?? 'User';
+                            final String photoURL = user?['photoURL'] ?? '';
 
                             return _buildReviewItem(
                               name,
@@ -483,8 +474,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  Widget _buildReviewItem(String name, String date, String comment, int rating, String photoURL)
-  {
+  // === BAGIAN PERUBAHAN FOTO PROFIL ===
+  Widget _buildReviewItem(
+      String name, String date, String comment, int rating, String photoURL) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
@@ -500,15 +492,14 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         children: [
           Row(
             children: [
-              // Avatar user di review
+              // Menggunakan asset default jika photoURL kosong
               CircleAvatar(
                 radius: 20,
                 backgroundImage: photoURL.isNotEmpty
                     ? NetworkImage(photoURL)
-                    : null,
-                child: photoURL.isEmpty
-                    ? Icon(Icons.person, color: Theme.of(context).primaryColor)
-                    : null,
+                    : const AssetImage('assets/images/default.png')
+                as ImageProvider,
+                backgroundColor: Colors.transparent, // Agar background putih tidak menumpuk
               ),
               const SizedBox(width: 10),
               Column(
@@ -516,7 +507,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
                     date,
@@ -558,7 +550,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             final Color errorColor = Theme.of(context).colorScheme.error;
             final Color primaryColor = Theme.of(context).primaryColor;
             final Color greyColor = Colors.grey[600]!;
-            const EdgeInsets buttonPadding = EdgeInsets.symmetric(vertical: 12, horizontal: 16);
+            const EdgeInsets buttonPadding =
+            EdgeInsets.symmetric(vertical: 12, horizontal: 16);
 
             return Dialog(
               insetPadding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -581,7 +574,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
                       TextField(
                         controller: _reviewController,
                         decoration: InputDecoration(
@@ -597,14 +589,19 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                             borderSide: BorderSide(
                               color: _hasReviewError
                                   ? errorColor
-                                  : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ??
+                                  : (Theme.of(context)
+                                  .inputDecorationTheme
+                                  .enabledBorder
+                                  ?.borderSide
+                                  .color ??
                                   Colors.grey),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.0),
                             borderSide: BorderSide(
-                              color: _hasReviewError ? errorColor : primaryColor,
+                              color:
+                              _hasReviewError ? errorColor : primaryColor,
                               width: 2,
                             ),
                           ),
@@ -612,7 +609,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         maxLines: 3,
                       ),
                       const SizedBox(height: 16),
-
                       Text(
                         _ratingErrorText ?? 'Rate this food',
                         textAlign: TextAlign.center,
@@ -622,7 +618,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               : Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -635,7 +630,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                 });
                               },
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                padding:
+                                const EdgeInsets.symmetric(horizontal: 4.0),
                                 child: Icon(
                                   i < _rating ? Icons.star : Icons.star_border,
                                   color: Colors.amber,
@@ -644,16 +640,15 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                             ),
                         ],
                       ),
-
                       const SizedBox(height: 16),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           OutlinedButton(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Theme.of(context).primaryColor,
-                              side: BorderSide(color: Theme.of(context).primaryColor),
+                              side: BorderSide(
+                                  color: Theme.of(context).primaryColor),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -664,9 +659,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                               Navigator.pop(dialogContext);
                             },
                           ),
-
                           const SizedBox(width: 8),
-
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
@@ -677,7 +670,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                             child: const Text('Kirim'),
                             onPressed: () async {
                               bool isValid = true;
-                              final String reviewText = _reviewController.text.trim();
+                              final String reviewText =
+                              _reviewController.text.trim();
 
                               stateSetter(() {
                                 if (reviewText.isEmpty) {
@@ -699,12 +693,15 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
                               if (isValid) {
                                 try {
-                                  await FirebaseFirestore.instance.collection('reviews').add({
+                                  await FirebaseFirestore.instance
+                                      .collection('reviews')
+                                      .add({
                                     'comment': reviewText,
                                     'rating': _rating,
                                     'foodID': widget.foodId,
-                                    'userID': FirebaseAuth.instance.currentUser!.uid,
-                                    'date': FieldValue.serverTimestamp(),
+                                    'userID': FirebaseAuth
+                                        .instance.currentUser!.uid,
+                                    'date': Timestamp.now(),
                                   });
                                   print('✅ Review berhasil ditambahkan!');
                                   Navigator.pop(dialogContext);
