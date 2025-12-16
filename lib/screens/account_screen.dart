@@ -40,14 +40,18 @@ class _AccountScreenState extends State<AccountScreen> {
   final ImagePicker _picker = ImagePicker();
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmNewPasswordController = TextEditingController();
-  
-  bool _isPasswordChanging = false;
+
+  bool _showPasswordFields = false;
   String? _successMessage;
   String? _nameError;
+  String? _oldPasswordError;
   String? _newPasswordError;
   String? _confirmNewPasswordError;
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -61,6 +65,7 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _oldPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmNewPasswordController.dispose();
     super.dispose();
@@ -86,10 +91,20 @@ class _AccountScreenState extends State<AccountScreen> {
     }
   }
 
+  void _resetPasswordFields() {
+    _oldPasswordController.clear();
+    _newPasswordController.clear();
+    _confirmNewPasswordController.clear();
+    _oldPasswordError = null;
+    _newPasswordError = null;
+    _confirmNewPasswordError = null;
+  }
+
   void _saveChanges() async {
     setState(() {
       _nameError = null;
       _successMessage = null;
+      _oldPasswordError = null;
       _newPasswordError = null;
       _confirmNewPasswordError = null;
       _isLoading = true;
@@ -98,6 +113,7 @@ class _AccountScreenState extends State<AccountScreen> {
     final newName = _nameController.text.trim();
     bool isNameChanged = newName != _currentName;
     bool isPhotoChanged = _pickedImageFile != null;
+    bool isPasswordChanged = _showPasswordFields;
     bool validationPassed = true;
     String successMessage = '';
 
@@ -106,10 +122,15 @@ class _AccountScreenState extends State<AccountScreen> {
       validationPassed = false;
     }
 
-    if (_isPasswordChanging) {
+    if (isPasswordChanged) {
+      final oldPassword = _oldPasswordController.text;
       final newPassword = _newPasswordController.text;
       final confirmPassword = _confirmNewPasswordController.text;
 
+      if (oldPassword.isEmpty) {
+        setState(() => _oldPasswordError = 'Old Password cannot be empty');
+        validationPassed = false;
+      }
       if (newPassword.isEmpty) {
         setState(() => _newPasswordError = 'New Password cannot be empty');
         validationPassed = false;
@@ -133,15 +154,33 @@ class _AccountScreenState extends State<AccountScreen> {
       return;
     }
 
-    if (!isNameChanged && !_isPasswordChanging && !isPhotoChanged) {
+    if (!isNameChanged && !isPasswordChanged && !isPhotoChanged) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No changes detected.')));
+        const SnackBar(content: Text('No changes detected.')),
+      );
       return;
     }
 
     try {
       if (_user == null) throw Exception("No user logged in.");
+
+      if (isPasswordChanged) {
+        final credential = EmailAuthProvider.credential(
+          email: _currentEmail,
+          password: _oldPasswordController.text,
+        );
+
+        await _user!.reauthenticateWithCredential(credential);
+        await _user!.updatePassword(_newPasswordController.text);
+
+        setState(() {
+          _showPasswordFields = false;
+          _resetPasswordFields();
+        });
+
+        successMessage += 'Password changed. ';
+      }
 
       if (isPhotoChanged) {
         final storageRef = _storage
@@ -156,6 +195,8 @@ class _AccountScreenState extends State<AccountScreen> {
         await _firestore.collection('users').doc(_user!.uid).update({
           'photoURL': imageUrl
         });
+
+        setState(() => _currentPhotoUrl = imageUrl);
         successMessage += 'Photo updated. ';
       }
 
@@ -164,18 +205,9 @@ class _AccountScreenState extends State<AccountScreen> {
         await _firestore.collection('users').doc(_user!.uid).update({
           'username': newName
         });
+
         setState(() => _currentName = newName);
         successMessage += 'Name updated. ';
-      }
-
-      if (_isPasswordChanging) {
-        await _user!.updatePassword(_newPasswordController.text);
-        setState(() {
-          _isPasswordChanging = false;
-          _newPasswordController.clear();
-          _confirmNewPasswordController.clear();
-        });
-        successMessage += 'Password changed. ';
       }
 
       setState(() {
@@ -185,18 +217,35 @@ class _AccountScreenState extends State<AccountScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.green, content: Text(_successMessage!)),
+        SnackBar(
+          backgroundColor: Colors.green,
+          content: Text(_successMessage!),
+        ),
       );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = e.message ?? 'An unknown error occurred.';
 
+      if (e.code == 'wrong-password' && isPasswordChanged) {
+        setState(() => _oldPasswordError = 'Incorrect Password');
+      } else if (e.code == 'requires-recent-login' && isPasswordChanged) {
+        setState(() => _oldPasswordError = 'Re-login required.');
+      }
+
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(backgroundColor: Colors.red, content: Text('Error: $errorMessage')),
+      );
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(backgroundColor: Colors.red, content: Text('Error: $e')));
+        SnackBar(backgroundColor: Colors.red, content: Text('Error: $e')),
+      );
     }
   }
 
   Widget _buildSmartAvatar() {
     ImageProvider? backgroundImage;
+
     if (_pickedImageFile != null) {
       backgroundImage = FileImage(_pickedImageFile!);
     } else if (_currentPhotoUrl != null && _currentPhotoUrl!.isNotEmpty) {
@@ -222,8 +271,13 @@ class _AccountScreenState extends State<AccountScreen> {
     if (shouldDelete == true) {
       try {
         setState(() => _isLoading = true);
+
         try {
-          await _storage.ref().child('user_profile_images').child('${_user!.uid}.jpg').delete();
+          await _storage
+              .ref()
+              .child('user_profile_images')
+              .child('${_user!.uid}.jpg')
+              .delete();
         } catch (_) {}
 
         await _firestore.collection('users').doc(_user!.uid).delete();
@@ -261,12 +315,17 @@ class _AccountScreenState extends State<AccountScreen> {
         await _firestore.collection('users').doc(_user!.uid).update({
           'email': newEmail
         });
+
         setState(() {
           _currentEmail = newEmail;
           _isLoading = false;
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(backgroundColor: Colors.green, content: Text('Email updated! Please verify.')),
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Email updated! Please verify.'),
+          ),
         );
       } catch (e) {
         setState(() => _isLoading = false);
@@ -295,13 +354,12 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       ),
       body: Form(
-        key: _formKey, // Menggunakan FormKey Global (Opsional, tapi praktik bagus)
+        key: _formKey,
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // --- AVATAR ---
               _buildSmartAvatar(),
               const SizedBox(height: 15),
               SizedBox(
@@ -315,19 +373,14 @@ class _AccountScreenState extends State<AccountScreen> {
                   child: const Text('Upload a picture', style: TextStyle(color: Colors.white)),
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              // --- NAME FIELD ---
               AccountField(
                 label: 'Your Name',
-                initialValue: _currentName,
+                initialValue: _nameController.text,
                 controller: _nameController,
                 isEditable: true,
                 errorText: _nameError,
               ),
-
-              // --- PASSWORD FIELD (READ ONLY) ---
               AccountField(
                 label: 'Password',
                 initialValue: '••••••••••',
@@ -335,23 +388,24 @@ class _AccountScreenState extends State<AccountScreen> {
                 isEditable: false,
                 onEditPressed: () {
                   setState(() {
-                    _isPasswordChanging = !_isPasswordChanging;
-                    if (!_isPasswordChanging) {
-                      _newPasswordController.clear();
-                      _confirmNewPasswordController.clear();
-                      _newPasswordError = null;
-                      _confirmNewPasswordError = null;
+                    _showPasswordFields = !_showPasswordFields;
+                    if (!_showPasswordFields) {
+                      _resetPasswordFields();
                     }
                   });
                 },
               ),
-
-              // --- NEW PASSWORD FIELDS (MUNCUL DI BAWAH PASSWORD JIKA CHANGE DIKLIK) ---
-              // PERBAIKAN: Menghapus Container dan style tambahan, 
-              // agar tampilannya "flat" dan menyatu seperti gambar.
-              if (_isPasswordChanging)
+              if (_showPasswordFields)
                 Column(
                   children: [
+                    AccountField(
+                      label: 'Old Password',
+                      initialValue: '',
+                      isSensitive: true,
+                      controller: _oldPasswordController,
+                      isEditable: true,
+                      errorText: _oldPasswordError,
+                    ),
                     AccountField(
                       label: 'New Password',
                       initialValue: '',
@@ -370,60 +424,13 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                   ],
                 ),
-
-              // --- EMAIL FIELD ---
               AccountField(
                 label: 'Email Address',
                 initialValue: _currentEmail,
                 isEditable: false,
-                onEditPressed: _isLoading ? null : _openChangeEmailDialog,
+                onEditPressed: _isLoading || _showPasswordFields ? null : _openChangeEmailDialog,
               ),
-
-              const SizedBox(height: 10),
-
-              // --- DELETE ACCOUNT ---
-              Align(
-                alignment: Alignment.centerLeft,
-                child: InkWell(
-                  onTap: _isLoading ? null : _showDeleteAccountDialog,
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Delete Your Account',
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Deleting your account will remove all your personal data and preferences. This action cannot be reversed.',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 40),
-
-              if (_successMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 15.0),
-                  child: Text(
-                    _successMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
-              // --- BUTTONS ---
               Row(
                 children: [
                   Expanded(
@@ -449,7 +456,8 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                              width: 20, height: 20,
+                              width: 20,
+                              height: 20,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                             )
                           : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -464,7 +472,4 @@ class _AccountScreenState extends State<AccountScreen> {
       ),
     );
   }
-  
-  // Opsional: Jika Anda belum mendeklarasikan _formKey di atas
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 }
