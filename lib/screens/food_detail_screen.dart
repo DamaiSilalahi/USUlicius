@@ -7,7 +7,6 @@ import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class FoodDetailScreen extends StatefulWidget {
   final String foodId;
   final int originIndex;
@@ -51,24 +50,44 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        // PENTING: Gunakan fixed agar 4 item terlihat rapi
+        type: BottomNavigationBarType.fixed,
         currentIndex: widget.originIndex,
         onTap: (index) {
+          // Logika Navigasi
           if (index == widget.originIndex) {
+            // Jika menekan tombol yang sama dengan asal halaman, kembali (pop)
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
           } else {
+            // Jika menekan tombol lain, kembali dulu lalu pindah tab di HomeScreen
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             }
             Future.delayed(const Duration(milliseconds: 50), () {
-              homeScreenKey.currentState?.navigateToPage(index);
+              // Panggil navigasi di HomeScreen
+              // Index 0: Food
+              if (index == 0) {
+                homeScreenKey.currentState?.navigateToPage(0);
+                homeContentKey.currentState?.scrollToTop();
+              }
+              // Index 2: Favorite (Sekarang di urutan ke-3)
+              else if (index == 2) {
+                homeScreenKey.currentState?.navigateToPage(2);
+                favoriteScreenKey.currentState?.scrollToTop();
+              }
+              // Index 1 (Add) atau 3 (Settings)
+              else {
+                homeScreenKey.currentState?.navigateToPage(index);
+              }
             });
           }
         },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         items: [
+          // 1. Food
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/images/food.png',
@@ -84,10 +103,21 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             label: 'Food',
           ),
+
+          // 2. Add (MENU BARU)
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle_outline),
+            activeIcon: Icon(Icons.add_circle),
+            label: 'Add',
+          ),
+
+          // 3. Favorite
           const BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
+
+          // 4. Settings
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
@@ -110,20 +140,19 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             child: widget.imageUrl.isNotEmpty
                 ? Image.asset(
-                    widget.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      print("Error load asset di Detail: ${widget.imageUrl}");
-                      return Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                      );
-                    },
-                  )
+              widget.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+                );
+              },
+            )
                 : Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
-                  ),
+              color: Colors.grey[200],
+              child: const Icon(Icons.broken_image, size: 100, color: Colors.grey),
+            ),
           ),
         ),
         Container(
@@ -224,19 +253,26 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
           const SizedBox(height: 16),
 
+          // === UPDATE: LOKASI TURUN KE BAWAH ===
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start, // Ikon tetap di atas
             children: [
-              Icon(Icons.location_on, color: Colors.grey[600], size: 18),
+              Padding(
+                padding: const EdgeInsets.only(top: 2.0), // Padding agar sejajar teks
+                child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   widget.location,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  overflow: TextOverflow.ellipsis,
+                  // Overflow ellipsis dihapus agar teks turun ke bawah (multiline)
                 ),
               ),
             ],
           ),
+          // ======================================
+
           const SizedBox(height: 24),
 
           const Text(
@@ -278,11 +314,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       children: [
         ...List.generate(
           rating,
-          (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
+              (index) => const Icon(Icons.star, color: Colors.amber, size: 20),
         ),
         ...List.generate(
           5 - rating,
-          (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
+              (index) => const Icon(Icons.star_border, color: Colors.amber, size: 20),
         ),
         const SizedBox(width: 8),
         Text(
@@ -317,11 +353,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   }
 
   Stream<DocumentSnapshot> _getFoodStream() {
-  return FirebaseFirestore.instance
-      .collection('foods')
-      .doc(widget.foodId)
-      .snapshots();
-}
+    return FirebaseFirestore.instance
+        .collection('foods')
+        .doc(widget.foodId)
+        .snapshots();
+  }
 
 
   void _showReviewSheet(BuildContext context) {
@@ -373,36 +409,35 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                           tanggal = "${dt.day} ${bulan[dt.month - 1]} ${dt.year}";
                         }
 
-                        /// PEMBULATAN CUSTOM UNTUK SHEET
                         int roundedSheetRating = (() {
                           final r = (d['rating'] ?? 0.0).toDouble();
                           return (r - r.floor() >= 0.6) ? r.ceil() : r.floor();
                         })();
 
                         return StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(d['userID'])
-                            .snapshots(),
-                        builder: (context, userSnap) {
-                          if (!userSnap.hasData) {
-                            return const SizedBox();
-                          }
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(d['userID'])
+                              .snapshots(),
+                          builder: (context, userSnap) {
+                            if (!userSnap.hasData) {
+                              return const SizedBox();
+                            }
 
-                          final user = userSnap.data!.data() as Map<String, dynamic>?;
+                            final user = userSnap.data!.data() as Map<String, dynamic>?;
 
-                          final String name = user?['username'] ?? 'User';
-                          final String photoURL = user?['photoURL'] ?? '';
+                            final String name = user?['username'] ?? 'User';
+                            final String photoURL = user?['photoURL'] ?? '';
 
-                          return _buildReviewItem(
-                            name,
-                            tanggal,
-                            d['comment'] ?? '-',
-                            roundedSheetRating,
-                            photoURL, 
-                          );
-                        },
-                      );
+                            return _buildReviewItem(
+                              name,
+                              tanggal,
+                              d['comment'] ?? '-',
+                              roundedSheetRating,
+                              photoURL,
+                            );
+                          },
+                        );
                       },
                     );
                   },
@@ -450,8 +485,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-Widget _buildReviewItem(String name, String date, String comment, int rating, String photoURL)
- {
+  Widget _buildReviewItem(String name, String date, String comment, int rating, String photoURL)
+  {
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
@@ -468,14 +503,14 @@ Widget _buildReviewItem(String name, String date, String comment, int rating, St
           Row(
             children: [
               CircleAvatar(
-  radius: 20,
-  backgroundImage: photoURL.isNotEmpty
-      ? NetworkImage(photoURL)
-      : null,
-  child: photoURL.isEmpty
-      ? Icon(Icons.person, color: Theme.of(context).primaryColor)
-      : null,
-),
+                radius: 20,
+                backgroundImage: photoURL.isNotEmpty
+                    ? NetworkImage(photoURL)
+                    : null,
+                child: photoURL.isEmpty
+                    ? Icon(Icons.person, color: Theme.of(context).primaryColor)
+                    : null,
+              ),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,7 +530,7 @@ Widget _buildReviewItem(String name, String date, String comment, int rating, St
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(
                   rating,
-                  (i) => const Icon(Icons.star, color: Colors.amber, size: 18),
+                      (i) => const Icon(Icons.star, color: Colors.amber, size: 18),
                 ),
               )
             ],
@@ -564,7 +599,7 @@ Widget _buildReviewItem(String name, String date, String comment, int rating, St
                               color: _hasReviewError
                                   ? errorColor
                                   : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ??
-                                      Colors.grey),
+                                  Colors.grey),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
