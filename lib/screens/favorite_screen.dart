@@ -6,7 +6,6 @@ import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/widgets/food_card.dart';
 import 'package:usulicius_kelompok_lucky/screens/food_detail_screen.dart';
 
-// Ubah menjadi StatefulWidget agar bisa menyimpan state ScrollController
 class FavoriteScreen extends StatefulWidget {
   const FavoriteScreen({super.key});
 
@@ -14,7 +13,6 @@ class FavoriteScreen extends StatefulWidget {
   State<FavoriteScreen> createState() => FavoriteScreenState();
 }
 
-// Hapus underscore (_) agar class State ini Public dan bisa diakses GlobalKey
 class FavoriteScreenState extends State<FavoriteScreen> {
   // 1. Buat ScrollController
   final ScrollController _scrollController = ScrollController();
@@ -32,12 +30,16 @@ class FavoriteScreenState extends State<FavoriteScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose(); // Bersihkan memori
+    _scrollController.dispose();
     super.dispose();
   }
 
   String buildImagePath(String rawImage) {
     if (rawImage.isEmpty) return "";
+    // Cek http juga biar konsisten
+    if (rawImage.startsWith('http')) {
+      return rawImage;
+    }
     return rawImage.startsWith("assets/")
         ? rawImage
         : "assets/images/${rawImage.split('/').last}";
@@ -73,7 +75,6 @@ class FavoriteScreenState extends State<FavoriteScreen> {
           }
 
           return ListView.builder(
-            // 3. Pasang controller di sini
             controller: _scrollController,
             padding: const EdgeInsets.only(top: 8.0),
             itemCount: favoriteItems.length,
@@ -82,9 +83,9 @@ class FavoriteScreenState extends State<FavoriteScreen> {
               final data = doc.data() as Map<String, dynamic>;
               final foodId = doc.id;
 
-              final String imagePath = buildImagePath(data['image'] ?? '');
+              final String imagePath = buildImagePath(data['imageUrl'] ?? data['image'] ?? '');
               final String price = (data['price'] ?? 0).toString();
-              final double rating = (data['averageRating'] ?? 0.0).toDouble();
+              final double rating = (data['rating'] ?? data['averageRating'] ?? 0.0).toDouble();
 
               return FoodCard(
                 foodId: foodId,
@@ -93,11 +94,14 @@ class FavoriteScreenState extends State<FavoriteScreen> {
                 location: data['location'] ?? 'Tanpa Lokasi',
                 rating: rating.toStringAsFixed(1),
                 onTap: () {
+                  // === PERBAIKAN ANIMASI DI SINI ===
+                  // Menggunakan PageRouteBuilder dengan Duration.zero
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => FoodDetailScreen(
-                        originIndex: 1, // Penting: ini 1 karena dari Favorite
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => FoodDetailScreen(
+                        // UBAH JADI 2 (Karena Favorite ada di index ke-2 pada BottomNav)
+                        originIndex: 2,
                         foodId: foodId,
                         imageUrl: imagePath,
                         title: data['name'] ?? 'Tanpa Nama',
@@ -105,6 +109,9 @@ class FavoriteScreenState extends State<FavoriteScreen> {
                         location: data['location'] ?? 'Tanpa Lokasi',
                         description: data['description'] ?? 'Tanpa Deskripsi',
                       ),
+                      // Matikan durasi animasi agar BottomNav terlihat diam (tanpa swipe)
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 },

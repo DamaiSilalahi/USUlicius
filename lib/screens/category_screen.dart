@@ -19,6 +19,9 @@ class CategoryScreen extends StatelessWidget {
 
   String buildImagePath(String rawImage) {
     if (rawImage.isEmpty) return "";
+    if (rawImage.startsWith('http')) {
+      return rawImage;
+    }
     return rawImage.startsWith("assets/")
         ? rawImage
         : "assets/images/${rawImage.split('/').last}";
@@ -53,7 +56,6 @@ class CategoryScreen extends StatelessWidget {
           )
         ],
       ),
-      // Hapus Column statis di sini, langsung ke StreamBuilder
       body: StreamBuilder<QuerySnapshot>(
         stream: foodStream,
         builder: (context, snapshot) {
@@ -63,15 +65,12 @@ class CategoryScreen extends StatelessWidget {
 
           final docs = snapshot.hasData ? snapshot.data!.docs : [];
 
-          // Kita gunakan ListView tunggal
-          // itemCount = jumlah data makanan + 1 (untuk Header Judul)
           return ListView.builder(
             padding: EdgeInsets.zero,
             itemCount: docs.length + 1,
             itemBuilder: (ctx, index) {
 
               // === ITEM 0: HEADER (JUDUL & SUBTITLE) ===
-              // Ini sekarang bagian dari List, jadi ikut terscroll
               if (index == 0) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +95,6 @@ class CategoryScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Jika data kosong, tampilkan pesan di bawah header
                     if (docs.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 50.0),
@@ -109,19 +107,17 @@ class CategoryScreen extends StatelessWidget {
               }
 
               // === ITEM SELANJUTNYA: MAKANAN ===
-              // Karena index 0 dipakai header, kita kurangi 1 untuk akses data
               final foodIndex = index - 1;
 
-              // Cek safety jika docs kosong (walaupun sudah dihandle di atas)
               if (docs.isEmpty) return const SizedBox();
 
               final doc = docs[foodIndex];
               final data = doc.data() as Map<String, dynamic>;
               final foodId = doc.id;
 
-              final String imagePath = buildImagePath(data['image'] ?? '');
+              final String imagePath = buildImagePath(data['imageUrl'] ?? data['image'] ?? '');
               final String price = (data['price'] ?? 0).toString();
-              final double rating = (data['averageRating'] ?? 0.0).toDouble();
+              final double rating = (data['rating'] ?? data['averageRating'] ?? 0.0).toDouble();
 
               return FoodCard(
                 foodId: foodId,
@@ -130,10 +126,12 @@ class CategoryScreen extends StatelessWidget {
                 location: data['location'] ?? 'Tanpa Lokasi',
                 rating: rating.toStringAsFixed(1),
                 onTap: () {
+                  // === PERBAIKAN ANIMASI DI SINI ===
+                  // Ganti MaterialPageRoute dengan PageRouteBuilder (Duration.zero)
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => FoodDetailScreen(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => FoodDetailScreen(
                         originIndex: 0,
                         foodId: foodId,
                         imageUrl: imagePath,
@@ -142,6 +140,9 @@ class CategoryScreen extends StatelessWidget {
                         location: data['location'] ?? 'Tanpa Lokasi',
                         description: data['description'] ?? 'Tanpa Deskripsi',
                       ),
+                      // Ini kuncinya: durasi 0 agar instan (tanpa swipe)
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
                     ),
                   );
                 },

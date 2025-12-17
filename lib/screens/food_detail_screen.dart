@@ -1,3 +1,5 @@
+// lib/screens/food_detail_screen.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -5,7 +7,6 @@ import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-
 
 class FoodDetailScreen extends StatefulWidget {
   final String foodId;
@@ -33,6 +34,13 @@ class FoodDetailScreen extends StatefulWidget {
 
 class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
+  String formatPrice(String price) {
+    final cleanPrice = price.replaceAll(RegExp(r'[^0-9]'), '');
+    final int value = int.tryParse(cleanPrice) ?? 0;
+    final formatter = NumberFormat('#,##0', 'id_ID');
+    return 'Rp ${formatter.format(value)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = Theme.of(context).primaryColor;
@@ -50,42 +58,23 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        // PENTING: Gunakan fixed agar 4 item terlihat rapi
         type: BottomNavigationBarType.fixed,
         currentIndex: widget.originIndex,
-        onTap: (index) {
-          // Logika Navigasi
-          if (index == widget.originIndex) {
-            // Jika menekan tombol yang sama dengan asal halaman, kembali (pop)
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-          } else {
-            // Jika menekan tombol lain, kembali dulu lalu pindah tab di HomeScreen
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            }
-            Future.delayed(const Duration(milliseconds: 50), () {
-              // Panggil navigasi di HomeScreen
-              // Index 0: Food
-              if (index == 0) {
-                homeScreenKey.currentState?.navigateToPage(0);
-                homeContentKey.currentState?.scrollToTop();
-              }
-              // Index 2: Favorite (Sekarang di urutan ke-3)
-              else if (index == 2) {
-                homeScreenKey.currentState?.navigateToPage(2);
-                favoriteScreenKey.currentState?.scrollToTop();
-              }
-              // Index 1 (Add) atau 3 (Settings)
-              else {
-                homeScreenKey.currentState?.navigateToPage(index);
-              }
-            });
-          }
-        },
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        onTap: (index) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (index == 0) {
+            homeScreenKey.currentState?.navigateToPage(0);
+            homeContentKey.currentState?.scrollToTop();
+          } else if (index == 2) {
+            homeScreenKey.currentState?.navigateToPage(2);
+            favoriteScreenKey.currentState?.scrollToTop();
+          } else {
+            homeScreenKey.currentState?.navigateToPage(index);
+          }
+        },
         items: [
           // 1. Food
           BottomNavigationBarItem(
@@ -93,18 +82,12 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               'assets/images/food.png',
               width: 24,
               height: 24,
-              color: Colors.grey,
-            ),
-            activeIcon: Image.asset(
-              'assets/images/food.png',
-              width: 24,
-              height: 24,
-              color: primaryColor,
+              color: widget.originIndex == 0 ? primaryColor : Colors.grey,
             ),
             label: 'Food',
           ),
 
-          // 2. Add (MENU BARU)
+          // 2. Add
           const BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
             activeIcon: Icon(Icons.add_circle),
@@ -113,26 +96,21 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
           // 3. Favorite
           const BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
+            icon: Icon(Icons.favorite_border),
+            activeIcon: Icon(Icons.favorite),
             label: 'Favorite',
           ),
 
           // 4. Settings
           const BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
       ),
     );
   }
-
-String formatPrice(String price) {
-  final cleanPrice = price.replaceAll(RegExp(r'[^0-9]'), '');
-  final int value = int.tryParse(cleanPrice) ?? 0;
-  final formatter = NumberFormat('#,##0', 'id_ID');
-  return 'Rp ${formatter.format(value)}';
-}
 
   Widget _buildImageHeader(bool isFavorite, FoodProvider foodProvider) {
     return Stack(
@@ -231,10 +209,10 @@ String formatPrice(String price) {
 
           Text(
             formatPrice(widget.price),
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: Theme.of(context).primaryColor,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).primaryColor,
             ),
           ),
           const SizedBox(height: 16),
@@ -260,12 +238,11 @@ String formatPrice(String price) {
 
           const SizedBox(height: 16),
 
-          // === UPDATE: LOKASI TURUN KE BAWAH ===
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start, // Ikon tetap di atas
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2.0), // Padding agar sejajar teks
+                padding: const EdgeInsets.only(top: 2.0),
                 child: Icon(Icons.location_on, color: Colors.grey[600], size: 18),
               ),
               const SizedBox(width: 8),
@@ -273,13 +250,10 @@ String formatPrice(String price) {
                 child: Text(
                   widget.location,
                   style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  // Overflow ellipsis dihapus agar teks turun ke bawah (multiline)
                 ),
               ),
             ],
           ),
-          // ======================================
-
           const SizedBox(height: 24),
 
           const Text(
@@ -366,7 +340,6 @@ String formatPrice(String price) {
         .snapshots();
   }
 
-
   void _showReviewSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -432,7 +405,6 @@ String formatPrice(String price) {
                             }
 
                             final user = userSnap.data!.data() as Map<String, dynamic>?;
-
                             final String name = user?['username'] ?? 'User';
                             final String photoURL = user?['photoURL'] ?? '';
 
@@ -492,8 +464,7 @@ String formatPrice(String price) {
     );
   }
 
-  Widget _buildReviewItem(String name, String date, String comment, int rating, String photoURL)
-  {
+  Widget _buildReviewItem(String name, String date, String comment, int rating, String photoURL) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
@@ -511,12 +482,10 @@ String formatPrice(String price) {
             children: [
               CircleAvatar(
                 radius: 20,
+                backgroundColor: Colors.transparent,
                 backgroundImage: photoURL.isNotEmpty
                     ? NetworkImage(photoURL)
-                    : null,
-                child: photoURL.isEmpty
-                    ? Icon(Icons.person, color: Theme.of(context).primaryColor)
-                    : null,
+                    : const AssetImage('assets/images/default.png') as ImageProvider,
               ),
               const SizedBox(width: 10),
               Column(
@@ -605,8 +574,7 @@ String formatPrice(String price) {
                             borderSide: BorderSide(
                               color: _hasReviewError
                                   ? errorColor
-                                  : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ??
-                                  Colors.grey),
+                                  : (Theme.of(context).inputDecorationTheme.enabledBorder?.borderSide.color ?? Colors.grey),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(

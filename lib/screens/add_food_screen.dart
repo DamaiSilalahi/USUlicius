@@ -1,3 +1,5 @@
+// lib/screens/add_food_screen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,7 +58,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     }
   }
 
-  // === FUNGSI RESET FORM ===
   void _resetForm() {
     FocusScope.of(context).unfocus(); // Tutup keyboard
     _formKey.currentState?.reset();   // Reset validator
@@ -177,13 +178,12 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                // === JUDUL BERWARNA HITAM ===
                 const Text(
                   "Add Recommendation",
                   style: TextStyle(
                     fontSize: 25,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black, // <-- Sudah diubah jadi Hitam
+                    color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 30),
@@ -239,12 +239,31 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitForm,
-                    style: ElevatedButton.styleFrom(backgroundColor: primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Kirim Rekomendasi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                    )
+                        : const Text(
+                      'Kirim Rekomendasi',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white
+                      ),
+                    ),
                   ),
                 ),
+
+
                 const SizedBox(height: 40),
               ],
             ),

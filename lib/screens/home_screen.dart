@@ -1,3 +1,5 @@
+// lib/screens/home_screen.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/screens/add_food_screen.dart';
@@ -233,10 +235,11 @@ class HomeContentState extends State<HomeContent> {
               location: data['location'] ?? 'Tanpa Lokasi',
               rating: rating.toStringAsFixed(1),
               onTap: () {
+                // === NAVIGASI FOOD CARD (SUDAH BENAR) ===
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => FoodDetailScreen(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => FoodDetailScreen(
                       originIndex: 0,
                       foodId: foodId,
                       imageUrl: imagePath,
@@ -245,6 +248,8 @@ class HomeContentState extends State<HomeContent> {
                       location: data['location'] ?? 'Tanpa Lokasi',
                       description: data['description'] ?? 'Tanpa Deskripsi',
                     ),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
                   ),
                 );
               },
@@ -270,12 +275,14 @@ class HomeContentState extends State<HomeContent> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => CategoryScreen(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const CategoryScreen(
                       title: 'Makanan Pedas',
                       subtitle: 'Bikin nagih, menggugah selera, dan penuh sensasi.',
                       category: "Pedas",
                     ),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
                   ),
                 );
               },
@@ -290,12 +297,14 @@ class HomeContentState extends State<HomeContent> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => CategoryScreen(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const CategoryScreen(
                       title: 'Makanan Manis',
                       subtitle: 'Rasa legit, bikin bahagia, dan selalu jadi favorit',
                       category: "Manis",
                     ),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
                   ),
                 );
               },
@@ -310,12 +319,14 @@ class HomeContentState extends State<HomeContent> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => CategoryScreen(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) => const CategoryScreen(
                       title: 'Makanan Pilihan',
                       subtitle: 'Rasanya pas, mengenyangkan, dan cocok untuk semua selera',
                       category: "Pilihan Mahasiswa",
                     ),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
                   ),
                 );
               },
