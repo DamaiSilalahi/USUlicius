@@ -178,16 +178,17 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                const Text(
-                  "Add Recommendation",
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                const Center(
+                  child: Text(
+                    "Add Recommendation",
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
-                // ============================
 
                 _buildImageUploadCard(),
                 if (_isImageMissing)
@@ -262,7 +263,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     ),
                   ),
                 ),
-
 
                 const SizedBox(height: 40),
               ],

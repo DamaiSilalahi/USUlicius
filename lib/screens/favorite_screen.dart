@@ -1,4 +1,3 @@
-// lib/screens/favorite_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -94,13 +93,10 @@ class FavoriteScreenState extends State<FavoriteScreen> {
                 location: data['location'] ?? 'Tanpa Lokasi',
                 rating: rating.toStringAsFixed(1),
                 onTap: () {
-                  // === PERBAIKAN ANIMASI DI SINI ===
-                  // Menggunakan PageRouteBuilder dengan Duration.zero
                   Navigator.push(
                     context,
                     PageRouteBuilder(
                       pageBuilder: (context, animation, secondaryAnimation) => FoodDetailScreen(
-                        // UBAH JADI 2 (Karena Favorite ada di index ke-2 pada BottomNav)
                         originIndex: 2,
                         foodId: foodId,
                         imageUrl: imagePath,
@@ -109,7 +105,6 @@ class FavoriteScreenState extends State<FavoriteScreen> {
                         location: data['location'] ?? 'Tanpa Lokasi',
                         description: data['description'] ?? 'Tanpa Deskripsi',
                       ),
-                      // Matikan durasi animasi agar BottomNav terlihat diam (tanpa swipe)
                       transitionDuration: Duration.zero,
                       reverseTransitionDuration: Duration.zero,
                     ),

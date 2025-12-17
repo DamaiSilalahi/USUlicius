@@ -42,7 +42,8 @@ class _AccountScreenState extends State<AccountScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmNewPasswordController = TextEditingController();
+  final TextEditingController _confirmNewPasswordController =
+  TextEditingController();
 
   bool _showPasswordFields = false;
   String? _successMessage;
@@ -102,7 +103,6 @@ class _AccountScreenState extends State<AccountScreen> {
     });
   }
 
-
   void _saveChanges() async {
     setState(() {
       _nameError = null;
@@ -149,12 +149,13 @@ class _AccountScreenState extends State<AccountScreen> {
           validationPassed = false;
         }
         if (newPassword != confirmPassword) {
-          setState(() => _confirmNewPasswordError = 'Passwords do not match');
+          setState(
+                  () => _confirmNewPasswordError = 'Passwords do not match');
           validationPassed = false;
         }
-
         if (newPassword == oldPassword) {
-          setState(() => _newPasswordError = 'New password cannot be the same as old password');
+          setState(() => _newPasswordError =
+          'New password cannot be the same as old password');
           validationPassed = false;
         }
       }
@@ -164,7 +165,6 @@ class _AccountScreenState extends State<AccountScreen> {
       setState(() => _isLoading = false);
       return;
     }
-
 
     if (!isNameChanged && !isPasswordChanged && !isPhotoChanged) {
       setState(() => _isLoading = false);
@@ -204,9 +204,10 @@ class _AccountScreenState extends State<AccountScreen> {
         final imageUrl = await storageRef.getDownloadURL();
 
         await _user.updatePhotoURL(imageUrl);
-        await _firestore.collection('users').doc(_user.uid).update({
-          'photoURL': imageUrl
-        });
+        await _firestore
+            .collection('users')
+            .doc(_user.uid)
+            .update({'photoURL': imageUrl});
 
         setState(() => _currentPhotoUrl = imageUrl);
         successMessage += 'Photo updated. ';
@@ -214,9 +215,10 @@ class _AccountScreenState extends State<AccountScreen> {
 
       if (isNameChanged) {
         await _user.updateDisplayName(newName);
-        await _firestore.collection('users').doc(_user.uid).update({
-          'username': newName
-        });
+        await _firestore
+            .collection('users')
+            .doc(_user.uid)
+            .update({'username': newName});
 
         setState(() => _currentName = newName);
         successMessage += 'Name updated. ';
@@ -235,54 +237,44 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       );
     } on FirebaseAuthException catch (e) {
-      // ---------------------------------------------------------
-      // BAGIAN PENTING: HANDLING ERROR
-      // ---------------------------------------------------------
-      
-      // Cek apakah error karena password salah (wrong-password) 
-      // ATAU kredensial tidak valid (invalid-credential)
-      if ((e.code == 'wrong-password' || e.code == 'invalid-credential') && isPasswordChanged) {
+      if ((e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') &&
+          isPasswordChanged) {
         setState(() {
-          // Set pesan error langsung di bawah field Old Password
-          _oldPasswordError = 'your password is incorrect'; 
+          _oldPasswordError = 'your password is incorrect';
           _isLoading = false;
         });
-        // STOP eksekusi di sini agar SnackBar TIDAK muncul
-        return; 
-      } 
-      
-      // Handle password lemah
-      else if (e.code == 'weak-password') {
+        return;
+      } else if (e.code == 'weak-password') {
         setState(() {
           _newPasswordError = 'Password too weak.';
           _isLoading = false;
         });
         return;
-      }
-      
-      // Handle session expired
-      else if (e.code == 'requires-recent-login') {
-         setState(() {
+      } else if (e.code == 'requires-recent-login') {
+        setState(() {
           _oldPasswordError = 'Session expired. Please relogin.';
           _isLoading = false;
         });
         return;
       }
 
-      // Jika errornya BUKAN karena password/validasi field, 
-      // baru tampilkan SnackBar (misal error koneksi internet)
       String errorMessage = e.message ?? 'An unknown error occurred.';
       setState(() => _isLoading = false);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red, content: Text('Error: $errorMessage')),
-      );
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Error: $errorMessage'),
+        ),
+      );
     } catch (e) {
-      // Error umum non-firebase
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red, content: Text('Error: $e')),
+        SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Error: $e'),
+        ),
       );
     }
   }
@@ -292,7 +284,8 @@ class _AccountScreenState extends State<AccountScreen> {
 
     if (_pickedImageFile != null) {
       backgroundImage = FileImage(_pickedImageFile!);
-    } else if (_currentPhotoUrl != null && _currentPhotoUrl!.isNotEmpty) {
+    } else if (_currentPhotoUrl != null &&
+        _currentPhotoUrl!.isNotEmpty) {
       backgroundImage = NetworkImage(_currentPhotoUrl!);
     }
 
@@ -301,7 +294,8 @@ class _AccountScreenState extends State<AccountScreen> {
       backgroundColor: Colors.grey.shade200,
       backgroundImage: backgroundImage,
       child: backgroundImage == null
-          ? Icon(Icons.person, size: 70, color: Colors.grey.shade400)
+          ? Icon(Icons.person,
+          size: 70, color: Colors.grey.shade400)
           : null,
     );
   }
@@ -325,8 +319,7 @@ class _AccountScreenState extends State<AccountScreen> {
         } catch (_) {}
 
         await _firestore.collection('users').doc(_user!.uid).delete();
-
-        await _user.delete();
+        await _user!.delete();
 
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
@@ -335,18 +328,21 @@ class _AccountScreenState extends State<AccountScreen> {
                 initialMessage: "Account deleted successfully.",
               ),
             ),
-                (Route<dynamic> route) => false,
+                (route) => false,
           );
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        if (e is FirebaseAuthException && e.code == 'requires-recent-login') {
+        if (e is FirebaseAuthException &&
+            e.code == 'requires-recent-login') {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please Log Out and Log In again to delete account.')),
+            const SnackBar(
+                content: Text(
+                    'Please Log Out and Log In again to delete account.')),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: ${e.toString()}')),
+            SnackBar(content: Text('Failed to delete: $e')),
           );
         }
       }
@@ -356,19 +352,22 @@ class _AccountScreenState extends State<AccountScreen> {
   void _openChangeEmailDialog() async {
     final newEmail = await showDialog<String>(
       context: context,
-      builder: (context) => ChangeEmailScreen(currentEmail: _currentEmail),
+      builder: (context) =>
+          ChangeEmailScreen(currentEmail: _currentEmail),
     );
 
     if (newEmail != null && newEmail.isNotEmpty && mounted) {
       try {
         setState(() => _isLoading = true);
+
         await FirebaseFunctions.instance
             .httpsCallable('updateUserEmail')
             .call({'newEmail': newEmail});
 
-        await _firestore.collection('users').doc(_user!.uid).update({
-          'email': newEmail
-        });
+        await _firestore
+            .collection('users')
+            .doc(_user!.uid)
+            .update({'email': newEmail});
 
         setState(() {
           _currentEmail = newEmail;
@@ -382,9 +381,11 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
         );
       } catch (e) {
+        setState(() => _isLoading = false);
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     const Color maroonColor = Color(0xFF8B0000);
@@ -392,7 +393,10 @@ class _AccountScreenState extends State<AccountScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Your account', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Your account',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -405,7 +409,8 @@ class _AccountScreenState extends State<AccountScreen> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -417,9 +422,13 @@ class _AccountScreenState extends State<AccountScreen> {
                   onPressed: _isLoading ? null : _pickImage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: maroonColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Upload a picture', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Upload a picture',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 30),
@@ -427,7 +436,6 @@ class _AccountScreenState extends State<AccountScreen> {
                 label: 'Your Name',
                 initialValue: _nameController.text,
                 controller: _nameController,
-                isEditable: true,
                 errorText: _nameError,
               ),
               AccountField(
@@ -452,7 +460,6 @@ class _AccountScreenState extends State<AccountScreen> {
                       initialValue: '',
                       isSensitive: true,
                       controller: _oldPasswordController,
-                      isEditable: true,
                       errorText: _oldPasswordError,
                     ),
                     AccountField(
@@ -460,15 +467,14 @@ class _AccountScreenState extends State<AccountScreen> {
                       initialValue: '',
                       isSensitive: true,
                       controller: _newPasswordController,
-                      isEditable: true,
                       errorText: _newPasswordError,
                     ),
                     AccountField(
                       label: 'Confirm New Password',
                       initialValue: '',
                       isSensitive: true,
-                      controller: _confirmNewPasswordController,
-                      isEditable: true,
+                      controller:
+                      _confirmNewPasswordController,
                       errorText: _confirmNewPasswordError,
                     ),
                   ],
@@ -477,76 +483,98 @@ class _AccountScreenState extends State<AccountScreen> {
                 label: 'Email Address',
                 initialValue: _currentEmail,
                 isEditable: false,
-                onEditPressed: _isLoading || _showPasswordFields ? null : _openChangeEmailDialog,
+                onEditPressed: _isLoading || _showPasswordFields
+                    ? null
+                    : _openChangeEmailDialog,
               ),
               const SizedBox(height: 10),
               Align(
-  alignment: Alignment.centerLeft,
-  child: InkWell(
-    onTap: _isLoading ? null : _showDeleteAccountDialog, // Memanggil fungsi
-    borderRadius: BorderRadius.circular(8.0),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Delete Your Account',
-            style: TextStyle(
-              color: Colors.red.shade700, 
-              fontWeight: FontWeight.bold, 
-              fontSize: 16
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Deleting your account will remove all your personal data and preferences. This action cannot be reversed.',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
-          ),
-        ],
-      ),
-    ),
-  ),
-),
-// --- AKHIR BAGIAN DELETE ACCOUNT ---
-
-const SizedBox(height: 20),
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  onTap:
+                  _isLoading ? null : _showDeleteAccountDialog,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8, horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Delete Your Account',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Deleting your account will remove all your personal data and preferences. This action cannot be reversed.',
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.pop(context),
+                      onPressed:
+                      _isLoading ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.grey.shade600,
                         side: BorderSide.none,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveChanges,
+                      onPressed:
+                      _isLoading ? null : _saveChanges,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: maroonColor,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       child: _isLoading
                           ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 3,
+                        ),
                       )
-                          : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          : const Text(
+                        'Save',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 40),
-              
             ],
           ),
         ),

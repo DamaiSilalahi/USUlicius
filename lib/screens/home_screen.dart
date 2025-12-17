@@ -1,5 +1,3 @@
-// lib/screens/home_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/screens/add_food_screen.dart';
@@ -235,7 +233,6 @@ class HomeContentState extends State<HomeContent> {
               location: data['location'] ?? 'Tanpa Lokasi',
               rating: rating.toStringAsFixed(1),
               onTap: () {
-                // === NAVIGASI FOOD CARD (SUDAH BENAR) ===
                 Navigator.push(
                   context,
                   PageRouteBuilder(

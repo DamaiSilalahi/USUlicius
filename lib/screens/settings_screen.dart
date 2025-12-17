@@ -91,7 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // Perubahan di sini: Menambahkan style fontWeight.bold
+
         title: const Text(
           'Settings',
           style: TextStyle(fontWeight: FontWeight.bold),
