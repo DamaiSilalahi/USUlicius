@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/widgets/account_field.dart';
 import 'package:usulicius_kelompok_lucky/screens/change_email_screen.dart';
-import 'package:usulicius_kelompok_lucky/widgets/photo_profile.dart'; // Pastikan file ini ada
-import 'package:usulicius_kelompok_lucky/widgets/delete_account.dart'; // Pastikan file ini ada
+import 'package:usulicius_kelompok_lucky/widgets/delete_account.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -180,12 +179,12 @@ class _AccountScreenState extends State<AccountScreen> {
 
       if (isPasswordChanged) {
         final credential = EmailAuthProvider.credential(
-          email: _user!.email!,
+          email: _user.email!,
           password: _oldPasswordController.text,
         );
 
-        await _user!.reauthenticateWithCredential(credential);
-        await _user!.updatePassword(_newPasswordController.text);
+        await _user.reauthenticateWithCredential(credential);
+        await _user.updatePassword(_newPasswordController.text);
 
         setState(() {
           _showPasswordFields = false;
@@ -199,13 +198,13 @@ class _AccountScreenState extends State<AccountScreen> {
         final storageRef = _storage
             .ref()
             .child('user_profile_images')
-            .child('${_user!.uid}.jpg');
+            .child('${_user.uid}.jpg');
 
         await storageRef.putFile(_pickedImageFile!);
         final imageUrl = await storageRef.getDownloadURL();
 
-        await _user!.updatePhotoURL(imageUrl);
-        await _firestore.collection('users').doc(_user!.uid).update({
+        await _user.updatePhotoURL(imageUrl);
+        await _firestore.collection('users').doc(_user.uid).update({
           'photoURL': imageUrl
         });
 
@@ -214,8 +213,8 @@ class _AccountScreenState extends State<AccountScreen> {
       }
 
       if (isNameChanged) {
-        await _user!.updateDisplayName(newName);
-        await _firestore.collection('users').doc(_user!.uid).update({
+        await _user.updateDisplayName(newName);
+        await _firestore.collection('users').doc(_user.uid).update({
           'username': newName
         });
 
@@ -236,21 +235,51 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       );
     } on FirebaseAuthException catch (e) {
-      String errorMessage = e.message ?? 'An unknown error occurred.';
-
-      if (e.code == 'wrong-password' && isPasswordChanged) {
-        setState(() => _oldPasswordError = 'Incorrect Old Password');
-      } else if (e.code == 'requires-recent-login') {
-        setState(() => _oldPasswordError = 'Session expired. Please relogin.');
-      } else if (e.code == 'weak-password') {
-        setState(() => _newPasswordError = 'Password too weak.');
+      // ---------------------------------------------------------
+      // BAGIAN PENTING: HANDLING ERROR
+      // ---------------------------------------------------------
+      
+      // Cek apakah error karena password salah (wrong-password) 
+      // ATAU kredensial tidak valid (invalid-credential)
+      if ((e.code == 'wrong-password' || e.code == 'invalid-credential') && isPasswordChanged) {
+        setState(() {
+          // Set pesan error langsung di bawah field Old Password
+          _oldPasswordError = 'your password is incorrect'; 
+          _isLoading = false;
+        });
+        // STOP eksekusi di sini agar SnackBar TIDAK muncul
+        return; 
+      } 
+      
+      // Handle password lemah
+      else if (e.code == 'weak-password') {
+        setState(() {
+          _newPasswordError = 'Password too weak.';
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      // Handle session expired
+      else if (e.code == 'requires-recent-login') {
+         setState(() {
+          _oldPasswordError = 'Session expired. Please relogin.';
+          _isLoading = false;
+        });
+        return;
       }
 
+      // Jika errornya BUKAN karena password/validasi field, 
+      // baru tampilkan SnackBar (misal error koneksi internet)
+      String errorMessage = e.message ?? 'An unknown error occurred.';
       setState(() => _isLoading = false);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(backgroundColor: Colors.red, content: Text('Error: $errorMessage')),
       );
+
     } catch (e) {
+      // Error umum non-firebase
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(backgroundColor: Colors.red, content: Text('Error: $e')),
@@ -297,7 +326,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
         await _firestore.collection('users').doc(_user!.uid).delete();
 
-        await _user!.delete();
+        await _user.delete();
 
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
@@ -450,7 +479,38 @@ class _AccountScreenState extends State<AccountScreen> {
                 isEditable: false,
                 onEditPressed: _isLoading || _showPasswordFields ? null : _openChangeEmailDialog,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 10),
+              Align(
+  alignment: Alignment.centerLeft,
+  child: InkWell(
+    onTap: _isLoading ? null : _showDeleteAccountDialog, // Memanggil fungsi
+    borderRadius: BorderRadius.circular(8.0),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Delete Your Account',
+            style: TextStyle(
+              color: Colors.red.shade700, 
+              fontWeight: FontWeight.bold, 
+              fontSize: 16
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Deleting your account will remove all your personal data and preferences. This action cannot be reversed.',
+            style: TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+        ],
+      ),
+    ),
+  ),
+),
+// --- AKHIR BAGIAN DELETE ACCOUNT ---
+
+const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -486,6 +546,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ],
               ),
               const SizedBox(height: 40),
+              
             ],
           ),
         ),

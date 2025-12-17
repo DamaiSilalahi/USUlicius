@@ -7,7 +7,6 @@ import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/verification_screen.dart';
-import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 

@@ -23,84 +23,99 @@ class AccountField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayValue = isSensitive ? '•' * initialValue.length : initialValue;
-    final bool isCustomErrorField = label.contains('Name') || label.contains('Password');
-    final bool showCustomErrorInBox = errorText != null && isCustomErrorField;
+    
+    const Color maroonColor = Color(0xFF8B0000);
+    const Color errorColor = Color(0xFF940128); // Warna merah gelap sesuai gambar
 
-    final String? inputHintText = showCustomErrorInBox
-        ? errorText
-        : (isEditable && (controller == null ? initialValue.isEmpty : controller!.text.isEmpty)
-            ? 'Enter ${label.toLowerCase()}'
-            : null);
+    // Cek apakah ada error
+    final bool hasError = errorText != null && errorText!.isNotEmpty;
 
-    final Color maroonColor = const Color(0xFF8B0000);
-    final Color errorColor = const Color(0xFF940128);
+    // Logika Hint Text
+    final String? inputHintText = (isEditable && (controller == null ? initialValue.isEmpty : controller!.text.isEmpty))
+        ? 'Enter ${label.toLowerCase()}'
+        : null;
 
     return Padding(
-      // UBAH: Mengurangi jarak bawah antar field dari 16.0 menjadi 10.0
-      padding: const EdgeInsets.only(bottom: 10.0), 
+      padding: const EdgeInsets.only(bottom: 15.0), // Jarak antar field
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. LABEL
           Text(
             label,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
-          // UBAH: Mengurangi jarak antara Label dan Kotak dari 8 menjadi 5
-          const SizedBox(height: 5), 
+          const SizedBox(height: 5),
 
+          // 2. INPUT FIELD
           TextFormField(
             controller: controller,
-            initialValue: (controller == null && !showCustomErrorInBox) ? displayValue : null,
+            initialValue: (controller == null) ? displayValue : null,
             readOnly: !isEditable,
             obscureText: isSensitive && isEditable,
             style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
-              // UBAH: Sedikit menipiskan padding dalam kotak
               contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
               filled: !isEditable,
               fillColor: Colors.grey.shade200,
               hintText: inputHintText,
-              hintStyle: TextStyle(
-                color: showCustomErrorInBox ? errorColor : Colors.grey,
-                fontWeight: showCustomErrorInBox ? FontWeight.w500 : FontWeight.normal,
-              ),
-              errorText: showCustomErrorInBox ? ' ' : null,
-              errorStyle: const TextStyle(fontSize: 0, height: 0),
+              hintStyle: const TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
+              
+              // Trik: Jangan masukkan errorText ke sini agar tidak merubah tinggi kotak default
+              errorStyle: const TextStyle(height: 0, fontSize: 0), 
+              
+              // Border Normal (Jika Error: Merah, Jika Tidak: Abu)
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                  color: showCustomErrorInBox ? errorColor : Colors.grey,
-                  width: showCustomErrorInBox ? 2.0 : 1.0,
+                  color: hasError ? errorColor : Colors.grey,
+                  width: hasError ? 1.5 : 1.0,
                 ),
               ),
+              // Border saat tidak fokus (Enabled)
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                  color: showCustomErrorInBox ? errorColor : const Color.fromARGB(255, 112, 34, 34),
-                  width: showCustomErrorInBox ? 2.0 : 1.0,
+                  color: hasError ? errorColor : const Color.fromARGB(255, 112, 34, 34),
+                  width: hasError ? 1.5 : 1.0,
                 ),
               ),
+              // Border saat diklik (Focused)
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                  color: showCustomErrorInBox ? errorColor : maroonColor,
+                  color: hasError ? errorColor : maroonColor,
                   width: 2.0,
                 ),
               ),
             ),
           ),
 
+          // 3. ERROR TEXT (Muncul di bawah kotak, sesuai gambar)
+          if (hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: 6.0, left: 2.0),
+              child: Text(
+                errorText!,
+                style: const TextStyle(
+                  color: errorColor, 
+                  fontSize: 13, 
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+          // 4. TOMBOL CHANGE (Khusus field read-only)
           if (onEditPressed != null)
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                // UBAH: Mengurangi jarak tulisan "Change" ke kotak
-                padding: const EdgeInsets.only(top: 2.0), 
+                padding: const EdgeInsets.only(top: 2.0),
                 child: InkWell(
                   onTap: onEditPressed,
                   child: Text(
                     'Change',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: maroonColor,
                       fontWeight: FontWeight.w500,
                       fontSize: 14,

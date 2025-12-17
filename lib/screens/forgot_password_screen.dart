@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/screens/verification_screen.dart';
-import 'package:usulicius_kelompok_lucky/widgets/status_dialog.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
