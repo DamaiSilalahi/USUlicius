@@ -5,7 +5,6 @@ import 'package:usulicius_kelompok_lucky/screens/account_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/about_us_screen.dart';
 
-
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -92,7 +91,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+
+        title: const Text(
+          'Settings',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 249, 249, 249),
         elevation: 0,

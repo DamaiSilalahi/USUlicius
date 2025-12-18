@@ -68,7 +68,6 @@ class CategoryScreen extends StatelessWidget {
             itemCount: docs.length + 1,
             itemBuilder: (ctx, index) {
 
-              // === ITEM 0: HEADER (JUDUL & SUBTITLE) ===
               if (index == 0) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +103,6 @@ class CategoryScreen extends StatelessWidget {
                 );
               }
 
-              // === ITEM SELANJUTNYA: MAKANAN ===
               final foodIndex = index - 1;
 
               if (docs.isEmpty) return const SizedBox();
@@ -124,8 +122,6 @@ class CategoryScreen extends StatelessWidget {
                 location: data['location'] ?? 'Tanpa Lokasi',
                 rating: rating.toStringAsFixed(1),
                 onTap: () {
-                  // === PERBAIKAN ANIMASI DI SINI ===
-                  // Ganti MaterialPageRoute dengan PageRouteBuilder (Duration.zero)
                   Navigator.push(
                     context,
                     PageRouteBuilder(
@@ -138,7 +134,6 @@ class CategoryScreen extends StatelessWidget {
                         location: data['location'] ?? 'Tanpa Lokasi',
                         description: data['description'] ?? 'Tanpa Deskripsi',
                       ),
-                      // Ini kuncinya: durasi 0 agar instan (tanpa swipe)
                       transitionDuration: Duration.zero,
                       reverseTransitionDuration: Duration.zero,
                     ),

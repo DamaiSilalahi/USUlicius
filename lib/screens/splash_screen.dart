@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:flutter/material.dart'; 
-import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:usulicius_kelompok_lucky/main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const AuthGate()),
         );
       }
     });
@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF800020), 
+      backgroundColor: const Color(0xFF800020),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -33,16 +33,15 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Image.asset(
               'assets/images/logo.gif',
-              width: 120, 
-              height: 120, 
+              width: 120,
+              height: 120,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                print("Error loading GIF: $error");
                 return const Text('Error loading logo', style: TextStyle(color: Colors.yellow));
               },
             ),
             const SizedBox(height: 20),
-            Text( 
+            Text(
               'USULicius',
               style: TextStyle(
                 color: Colors.white,
@@ -53,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   Shadow(
                     offset: const Offset(0, 8),
                     blurRadius: 4,
-                    color: const Color(0xFF000000).withOpacity(0.25), 
+                    color: const Color(0xFF000000).withOpacity(0.25),
                   )
                 ],
               ),

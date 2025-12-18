@@ -166,13 +166,11 @@ class _ChangeEmailDialogState extends State<ChangeEmailScreen> {
                           color: emailErrorActive ? maroonColor : Colors.grey,
                           fontWeight: emailErrorActive ? FontWeight.w500 : FontWeight.normal,
                         ),
-                        // ... (Styling border Anda tetap saya pertahankan, sangat bagus) ...
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: emailErrorActive ? maroonColor : Colors.grey)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: emailErrorActive ? maroonColor : Colors.grey.shade400)),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide(color: maroonColor, width: 2.0)),
                       ),
                     ),
-                    // Tampilkan Error Text secara eksplisit jika ada (opsional, karena sudah di hint)
                     if (_emailErrorText != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),

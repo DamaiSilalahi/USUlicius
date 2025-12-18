@@ -105,7 +105,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         'price': int.parse(_priceController.text.replaceAll(RegExp(r'[^0-9]'), '')),
         'description': _descriptionController.text.trim(),
         'imageUrl': imageUrl,
-        'rating': 0.0,
         'createdAt': FieldValue.serverTimestamp(),
         'uploadedBy': FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
       });
@@ -176,16 +175,17 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 
-                const Text(
-                  "Add Recommendation",
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                const Center(
+                  child: Text(
+                    "Add Recommendation",
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
-                // ============================
 
                 _buildImageUploadCard(),
                 if (_isImageMissing)
@@ -260,7 +260,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     ),
                   ),
                 ),
-
 
                 const SizedBox(height: 40),
               ],

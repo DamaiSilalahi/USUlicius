@@ -233,7 +233,6 @@ class HomeContentState extends State<HomeContent> {
               location: data['location'] ?? 'Tanpa Lokasi',
               rating: rating.toStringAsFixed(1),
               onTap: () {
-                // === NAVIGASI FOOD CARD (SUDAH BENAR) ===
                 Navigator.push(
                   context,
                   PageRouteBuilder(

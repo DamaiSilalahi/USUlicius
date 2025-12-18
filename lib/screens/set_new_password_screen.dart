@@ -136,7 +136,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
       ),
       body: Stack(
         children: [
-          // 1. BAGIAN LOGO (Sama persis dengan Login/Forgot: Height 0.40)
+          // 1. BAGIAN LOGO
           Positioned(
             top: 0,
             left: 0,
@@ -166,14 +166,14 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
             ),
           ),
 
-          // 2. BAGIAN CONTAINER PUTIH (Sama persis: Top 0.38 & Bottom 0)
+          // 2. BAGIAN CONTAINER PUTIH
           Positioned(
             top: MediaQuery.of(context).size.height * 0.38,
             left: 0,
             right: 0,
-            bottom: 0.0, // Memaksa container menempel ke bawah
+            bottom: 0.0,
             child: Stack(
-              fit: StackFit.expand, // Memaksa child mengisi area full
+              fit: StackFit.expand,
               alignment: Alignment.topCenter,
               children: [
                 // Layer Shadow/Accent Pink
@@ -279,7 +279,7 @@ class _SetNewPasswordScreenState extends State<SetNewPasswordScreen> {
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10), // Samakan dengan style tombol Login
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                             child: _isLoading

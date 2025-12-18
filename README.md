@@ -1,16 +1,45 @@
-# usulicius_kelompok_lucky
+# 🍽️ USUlicius – Aplikasi Rekomendasi Makanan Sekitar USU
 
-A new Flutter project.
+## 📌 Latar Belakang
+Mahasiswa Universitas Sumatera Utara sering mengalami kesulitan dalam memilih makanan di sekitar kampus karena kurangnya informasi mengenai kualitas, harga, dan pengalaman pengguna lain. Untuk mengatasi hal tersebut, USUlicius dikembangkan sebagai aplikasi rekomendasi makanan yang menyediakan informasi detail, rating, dan ulasan sehingga membantu mahasiswa menemukan makanan yang sesuai dengan kebutuhan dan preferensi mereka.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 📱 Tentang USUlicius
+USUlicius adalah aplikasi Android yang dirancang untuk membantu mahasiswa Universitas Sumatera Utara dalam mencari dan mengeksplorasi makanan di sekitar kampus. Aplikasi ini menyediakan fitur pencarian, ulasan, favorit, serta rekomendasi makanan yang diverifikasi sebelum ditampilkan.
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## ✨ Fitur Aplikasi
+- Registrasi, login, dan logout pengguna  
+- Pencarian dan filter makanan berdasarkan kategori  
+- Melihat detail makanan (nama, deskripsi, harga, gambar, dan lokasi)  
+- Memberikan rating dan ulasan makanan  
+- Menandai dan mengelola makanan favorit  
+- Mengajukan rekomendasi makanan (Add Makanan)  
+- Manajemen profil pengguna  
+- Halaman About Us  
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 🛠️ Teknologi
+- Visual Studio Code/ Android  
+- Firebase Authentication  
+- Firebase Firestore  
+- Firebase Storage  
+
+---
+
+## 📂 Isi Repository
+Repository ini merepresentasikan versi final project yang mencakup:
+- File atau link rilis aplikasi Android:
+- Dokumen SRS: 
+
+## 👨‍💻 Tim Pengembang
+
+- 231491126 – Damai Silalahi (System Analyst)  
+- 231401129 – Katherina Nasrani Barus (Software Programmer)  
+- 231401137 – Lauren Patricia Pardede (Quality Assurance & UI Design)  
+- 231401137 – Asnawati Laia (Database System Design)  
+
+---

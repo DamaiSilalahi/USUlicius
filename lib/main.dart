@@ -121,7 +121,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const AuthGate(),
+      home: const SplashScreen(),
     );
   }
 }
@@ -137,10 +137,7 @@ class AuthGate extends StatelessWidget {
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: kPrimaryMaroon,
-            body: Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF800020))),
           );
         }
 
