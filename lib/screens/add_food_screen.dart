@@ -107,7 +107,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
         'price': int.parse(_priceController.text.replaceAll(RegExp(r'[^0-9]'), '')),
         'description': _descriptionController.text.trim(),
         'imageUrl': imageUrl,
-        'rating': 0.0,
         'createdAt': FieldValue.serverTimestamp(),
         'uploadedBy': FirebaseAuth.instance.currentUser?.uid ?? 'anonymous',
       });

@@ -309,42 +309,51 @@ class _AccountScreenState extends State<AccountScreen> {
     if (shouldDelete == true) {
       try {
         setState(() => _isLoading = true);
-
         try {
           await _storage
               .ref()
               .child('user_profile_images')
               .child('${_user!.uid}.jpg')
               .delete();
-        } catch (_) {}
+        } catch (_) {
+        }
 
         await _firestore.collection('users').doc(_user!.uid).delete();
+
         await _user!.delete();
+
+        await FirebaseAuth.instance.signOut();
 
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (context) => const LoginScreen(
-                initialMessage: "Account deleted successfully.",
+                initialMessage: "Account deleted successfully. We're sad to see you go~",
               ),
             ),
-                (route) => false,
+                (Route<dynamic> route) => false,
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        setState(() => _isLoading = false);
+
+        if (e.code == 'requires-recent-login') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Security: Please Log Out and Log In again to delete account.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete: ${e.message}')),
           );
         }
       } catch (e) {
         setState(() => _isLoading = false);
-        if (e is FirebaseAuthException &&
-            e.code == 'requires-recent-login') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text(
-                    'Please Log Out and Log In again to delete account.')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: $e')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
       }
     }
   }

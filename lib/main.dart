@@ -7,6 +7,7 @@ import 'package:usulicius_kelompok_lucky/providers/food_provider.dart';
 import 'package:usulicius_kelompok_lucky/screens/login_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/home_screen.dart';
 import 'package:usulicius_kelompok_lucky/screens/verification_screen.dart';
+import 'package:usulicius_kelompok_lucky/screens/splash_screen.dart';
 
 const Color kPrimaryMaroon = Color(0xFF800020);
 
@@ -120,7 +121,7 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const AuthGate(),
+      home: const SplashScreen(),
     );
   }
 }
@@ -136,10 +137,7 @@ class AuthGate extends StatelessWidget {
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: kPrimaryMaroon,
-            body: Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF800020))),
           );
         }
 
