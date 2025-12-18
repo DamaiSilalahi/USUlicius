@@ -1,5 +1,3 @@
-// lib/screens/add_food_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

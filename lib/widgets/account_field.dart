@@ -55,7 +55,6 @@ class AccountField extends StatelessWidget {
             obscureText: isSensitive && isEditable,
             style: const TextStyle(color: Colors.black),
             decoration: InputDecoration(
-              // UBAH: Sedikit menipiskan padding dalam kotak
               contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
               filled: !isEditable,
               fillColor: Colors.grey.shade200,

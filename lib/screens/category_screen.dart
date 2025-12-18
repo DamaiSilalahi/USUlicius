@@ -1,5 +1,3 @@
-// lib/screens/category_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:usulicius_kelompok_lucky/screens/food_detail_screen.dart';
