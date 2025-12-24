@@ -33,6 +33,7 @@ USUlicius adalah aplikasi Android yang dirancang untuk membantu mahasiswa Univer
 ## 📂 Isi Repository
 Repository ini merepresentasikan versi final project yang mencakup:
 - File atau link rilis aplikasi Android dan Dokumen SRS: https://drive.google.com/drive/u/0/folders/16mrqrnwwIWhvHoMzJH7ADFwrSaiECHkz
+- Release: https://github.com/DamaiSilalahi/USUlicius/releases/tag/v1.0.0
 
 ## 👨‍💻 Tim Pengembang
 
