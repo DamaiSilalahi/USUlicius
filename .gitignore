@@ -110,3 +110,5 @@ android/app/google-services.json
 # 3. Konfigurasi iOS/macOS
 ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
+
+*.txt
